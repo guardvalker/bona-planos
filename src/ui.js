@@ -1,6 +1,6 @@
 // Barra de herramientas, chips de circuitos, panel de selección y diálogo de datos.
 import {
-  getPlan, session, circuitOf, circuitIndex, checkpoint, notify, summarize, countsText, normalize,
+  getPlan, session, circuitOf, circuitIndex, checkpoint, notify, summarize, describeRow, normalize, U,
   replacePlan, undo, redo, canUndo, canRedo, techText, ROOM_TEMPLATES
 } from './state.js';
 import { exportPng, exportSvg, printPlan, exportJson, readPlanFile } from './export.js';
@@ -8,7 +8,8 @@ import { SYMBOLS, SYMBOL_TYPES, symbolIcon } from './symbols.js';
 import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
-  setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection, armTemplate
+  setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection, armTemplate,
+  finishCable, cancelCable, deleteVertex
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -23,7 +24,7 @@ function buildBar() {
   $('#bar').innerHTML =
     btn('select', t('tool.select')) + btn('room', t('tool.room')) +
     `<button id="bTpl">${t('tool.template')}</button><span class="sep"></span>` +
-    SYMBOL_TYPES.map(sym).join('') + btn('label', t('tool.label')) + '<span class="sep"></span>' +
+    SYMBOL_TYPES.map(sym).join('') + btn('cable', t('tool.cable')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
     `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
     `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));
@@ -46,6 +47,7 @@ function renderHint() {
   if (tool === 'select') s = t('hint.select');
   else if (tool === 'room') s = session.template ? t('hint.template', { name: t(`tpl.${session.template.key}`) }) : t('hint.room');
   else if (tool === 'label') s = t('hint.label');
+  else if (tool === 'cable') s = t('hint.cable', { circuit: circuitOf(plan.active) ? `${cShort(plan.active)} ${circuitOf(plan.active).name}` : t('circuit.none') });
   else {
     const c = circuitOf(plan.active);
     s = t('hint.place', { put: t(`sym.${tool}.put`) });
@@ -77,6 +79,14 @@ function editOnce(input, fn) {
 
 function renderSel() {
   const plan = getPlan(), sel = session.sel, el = $('#selrow');
+  if (session.draft) {                                     // trazando un cable
+    const d = session.draft, c = circuitOf(d.c);
+    el.innerHTML = `<span class="lbl">${t('cable.drawing', { circuit: c ? cLabel(c) : t('circuit.none'), points: tn('count.punto', d.pts.length) })}</span>` +
+      `<button id="bDone" class="primary">${t('cable.done')}</button><button id="bCancel">${t('cable.cancel')}</button>`;
+    $('#bDone').addEventListener('click', finishCable);
+    $('#bCancel').addEventListener('click', cancelCable);
+    return;
+  }
   if (!sel) { el.innerHTML = `<span class="lbl">${t('sel.none')}</span>`; return; }
   const del = `<button id="bDel" class="danger">${t('sel.delete')}</button>`;
   const rot = `<button id="bRot">${t('sel.rotate')}</button>`;
@@ -85,6 +95,17 @@ function renderSel() {
     if (!r) { el.innerHTML = ''; return; }
     el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}">${del}`;
     editOnce($('#rname'), v => { r.name = v; });
+  } else if (sel.kind === 'cable') {
+    const cb = plan.cables.find(x => x.id === sel.id);
+    if (!cb) { el.innerHTML = ''; return; }
+    const c = circuitOf(cb.c);
+    let len = 0;
+    for (let i = 1; i < cb.pts.length; i++) len += Math.hypot(cb.pts[i][0] - cb.pts[i - 1][0], cb.pts[i][1] - cb.pts[i - 1][1]);
+    const canDrop = sel.vi !== undefined && cb.pts.length > 2;
+    el.innerHTML = `<span class="lbl">${t('cable.sel', { circuit: c ? cLabel(c) : t('circuit.none'), points: tn('count.punto', cb.pts.length), m: fmtNum(Math.round(len / U * 10) / 10) })}${t('cable.reassign')}</span>` +
+      (canDrop ? `<button id="bVert">${t('cable.removePoint')}</button>` : '') + del;
+    const bv = $('#bVert');
+    if (bv) bv.addEventListener('click', deleteVertex);
   } else if (sel.kind === 'label') {
     const l = plan.labels.find(x => x.id === sel.id);
     if (!l) { el.innerHTML = ''; return; }
@@ -136,9 +157,9 @@ function renderLegend() {
   const row = (color, label, detail, total, tech = '') =>
     `<div class="lrow"><i style="background:${color}"></i><span class="ln">${esc(label)}</span><span class="lc">${esc(detail)}</span><b>${tn('count.boca', total)}</b>` +
     (tech ? `<span class="ltech">${esc(tech)}</span>` : '') + '</div>';
-  let h = sum.rows.map(r => row(r.color, `${cShort(r.id)} ${r.name}`, countsText(r.counts), r.total, techText(getPlan().circuits[r.n - 1]))).join('');
-  if (sum.orphan) h += row('#8b9aa8', t('circuit.none'), countsText(sum.orphan.counts), sum.orphan.total);
-  const other = Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)).join(' · ');
+  let h = sum.rows.map(r => row(r.color, `${cShort(r.id)} ${r.name}`, describeRow(r), r.total, techText(getPlan().circuits[r.n - 1]))).join('');
+  if (sum.orphan) h += row('#8b9aa8', t('circuit.none'), describeRow(sum.orphan), sum.orphan.total);
+  const other = [...Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)), ...(sum.cableTotal > 0 ? [t('legend.cableTotal', { m: fmtNum(sum.cableTotal) })] : [])].join(' · ');
   if (other) h += `<div class="lrow"><span class="lc">${esc(other)}</span></div>`;
   h += `<div class="lrow tot"><span class="ln">${t('legend.total')}</span><b>${tn('count.boca', sum.total)}</b></div>`;
   $('#legendBody').innerHTML = h;
@@ -238,7 +259,8 @@ export function initUI({ goHome }) {
     const tag = (document.activeElement && document.activeElement.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-    if ((e.key === 'Delete' || e.key === 'Backspace') && session.sel) { e.preventDefault(); deleteSelection(); }
+    if (e.key === 'Enter' && session.draft) { e.preventDefault(); finishCable(); }
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && session.sel) { e.preventDefault(); deleteSelection(); }
     else if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
     else if (mod && k === 'y') { e.preventDefault(); redo(); }
     else if (e.key === 'Escape') {

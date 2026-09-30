@@ -1,6 +1,6 @@
 // Exportaciones: SVG autónomo (plano + leyenda + resumen), PNG, impresión/PDF y JSON.
 // El SVG usa colores fijos de tema claro: sale igual aunque la app esté en oscuro.
-import { getPlan, summarize, countsText, techText, normalize, U } from './state.js';
+import { getPlan, summarize, describeRow, techText, normalize, U } from './state.js';
 import { SYMBOLS, drawSymbol } from './symbols.js';
 import { t, tn, fmtNum, lang } from './i18n.js';
 import { esc } from './canvas.js';
@@ -19,6 +19,7 @@ export function buildSvg(plan = getPlan()) {
   const ext = (a, b, c, d) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, c); y1 = Math.max(y1, d); };
   plan.rooms.forEach(r => ext(r.x - 2, r.y - 2, r.x + r.w + 2, r.y + r.h + 2));
   plan.items.forEach(i => ext(i.x - 16, i.y - 16, i.x + 16, i.y + 28));
+  plan.cables.forEach(cb => cb.pts.forEach(q => ext(q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4)));
   plan.labels.forEach(l => {
     const along = l.text.length * 3.8 + 6, across = 10;      // semilargo y semialto aproximados del texto
     const v = l.rot === 90 || l.rot === 270;
@@ -28,9 +29,9 @@ export function buildSvg(plan = getPlan()) {
   const pw = x1 - x0, ph = y1 - y0;
 
   // líneas de la leyenda
-  const lines = sum.rows.map(r => ({ color: r.color, label: cName(r.n, r.name), detail: countsText(r.counts), total: r.total, tech: techText(plan.circuits[r.n - 1]) }));
-  if (sum.orphan) lines.push({ color: C.none, label: t('legend.unassigned'), detail: countsText(sum.orphan.counts), total: sum.orphan.total, tech: '' });
-  const otherTxt = Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)).join(' · ');
+  const lines = sum.rows.map(r => ({ color: r.color, label: cName(r.n, r.name), detail: describeRow(r), total: r.total, tech: techText(plan.circuits[r.n - 1]) }));
+  if (sum.orphan) lines.push({ color: C.none, label: t('legend.unassigned'), detail: describeRow(sum.orphan), total: sum.orphan.total, tech: '' });
+  const otherTxt = [...Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)), ...(sum.cableTotal > 0 ? [t('legend.cableTotal', { m: fmtNum(sum.cableTotal) })] : [])].join(' · ');
   const longest = Math.max(...lines.map(l => Math.max((l.label + l.detail).length + 14, l.tech.length * 0.85 + 4)), 40);
   const W = Math.max(pw + PAD * 2, longest * 7.4 + PAD * 2 + 30, 420);
 
@@ -46,6 +47,12 @@ export function buildSvg(plan = getPlan()) {
     g += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${C.room}" stroke="${C.wall}" stroke-width="3"/>`
       + `<text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 - 2}" font-size="13" font-weight="600" fill="${C.ink}" text-anchor="middle">${esc(r.name)}</text>`
       + `<text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 + 12}" font-size="10" fill="${C.mute}" text-anchor="middle">${fmtNum(r.w / U)} × ${fmtNum(r.h / U)} m</text>`;
+  }
+  for (const cb of plan.cables) {
+    const c = plan.circuits.find(c => c.id === cb.c), col = c ? c.color : C.none;
+    const pts = cb.pts.map(q => q.join(',')).join(' ');
+    g += `<polyline points="${pts}" fill="none" stroke="${C.room}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`
+      + `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" stroke-linecap="round" stroke-linejoin="round"/>`;
   }
   for (const it of plan.items) {
     const sym = SYMBOLS[it.type];

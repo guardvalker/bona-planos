@@ -5,11 +5,12 @@
 //     rooms:[{id,x,y,w,h,name}],
 //     items:[{id,type,x,y,c,rot}],          type: clave de SYMBOLS; rot: 0|90|180|270
 //     labels:[{id,x,y,text,rot}],           texto libre sobre el plano
+//     cables:[{id,c,pts:[[x,y],...]}],      recorrido aproximado de los conductores (c: circuito)
 //     circuits:[{id,name,color,prot,cable,rcd,notes}],   datos técnicos opcionales (texto libre)
 //     active }
-// v1 (sin labels, rot ni datos técnicos) y el formato del prototipo se siguen aceptando.
+// v1/v2 (sin cables, labels, rot ni datos técnicos) y el formato del prototipo se siguen aceptando.
 // Unidades del mundo: 1 m = 40 u; snap 10 para ambientes y 5 para elementos.
-import { t, tn } from './i18n.js';
+import { t, tn, fmtNum } from './i18n.js';
 import { SYMBOLS, SYMBOL_TYPES } from './symbols.js';
 
 export const U = 40;
@@ -24,10 +25,10 @@ export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function newPlan(name = '') {
   return {
-    v: 2, id: crypto.randomUUID ? crypto.randomUUID() : uid() + uid(), name,
+    v: 3, id: crypto.randomUUID ? crypto.randomUUID() : uid() + uid(), name,
     updatedAt: new Date().toISOString(),
     units: { perMeter: U, snap: SNAP },
-    rooms: [], items: [], labels: [],
+    rooms: [], items: [], labels: [], cables: [],
     circuits: [
       { id: 'c1', name: t('circuit.lighting'), color: PALETTE[0] },
       { id: 'c2', name: t('circuit.sockets'), color: PALETTE[1] },
@@ -73,6 +74,12 @@ export function normalize(d) {
     if (x === null || y === null || !text) return null;
     return { id: safeId(l.id) || uid(), x, y, text, rot: safeRot(l.rot) };
   }).filter(Boolean);
+  p.cables = (Array.isArray(d.cables) ? d.cables : []).map(cb => {
+    const pts = (Array.isArray(cb && cb.pts) ? cb.pts : []).slice(0, 300)
+      .map(q => (Array.isArray(q) && num(q[0]) !== null && num(q[1]) !== null ? [+q[0], +q[1]] : null)).filter(Boolean);
+    if (pts.length < 2) return null;
+    return { id: safeId(cb.id) || uid(), c: p.circuits.some(c => c.id === cb.c) ? cb.c : null, pts };
+  }).filter(Boolean);
   p.active = p.circuits.some(c => c.id === d.active) ? d.active : p.circuits[0].id;
   return p;
 }
@@ -80,7 +87,9 @@ export function normalize(d) {
 /* ---------- estado ---------- */
 let plan = newPlan();
 export const getPlan = () => plan;
-export const session = { tool: 'select', sel: null, template: null };   // sel: {kind:'room'|'item'|'label', id}
+// sel: {kind:'room'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable
+// draft: cable que se está dibujando (un solo checkpoint para todo el trazado)
+export const session = { tool: 'select', sel: null, template: null, draft: null };
 
 export const circuitOf = id => plan.circuits.find(c => c.id === id);
 export const circuitIndex = id => plan.circuits.findIndex(c => c.id === id);
@@ -104,14 +113,14 @@ export function undo() {
   if (!undoStack.length) return;
   redoStack.push(JSON.stringify(plan));
   plan = JSON.parse(undoStack.pop());
-  session.sel = null;
+  session.sel = null; session.draft = null;
   notify('data');
 }
 export function redo() {
   if (!redoStack.length) return;
   undoStack.push(JSON.stringify(plan));
   plan = JSON.parse(redoStack.pop());
-  session.sel = null;
+  session.sel = null; session.draft = null;
   notify('data');
 }
 
@@ -119,7 +128,7 @@ export function redo() {
 export function setPlan(p) {
   plan = p;
   undoStack = []; redoStack = [];
-  session.sel = null; session.tool = 'select'; session.template = null;
+  session.sel = null; session.tool = 'select'; session.template = null; session.draft = null;
   notify('load');
 }
 // Reemplaza el contenido del plano actual dejando el cambio deshacible.
@@ -143,7 +152,16 @@ export function notify(kind = 'data') {
   listeners.forEach(fn => fn(kind));
 }
 
+// Cierra el cable en trazado: con menos de 2 puntos no es un cable y se descarta sin dejar historial.
+export function endDraft() {
+  const d = session.draft;
+  if (!d) return;
+  session.draft = null;
+  if (d.pts.length < 2) { plan.cables = plan.cables.filter(c => c.id !== d.id); dropCheckpoint(); session.sel = null; }
+}
+
 export function setTool(tool) {
+  if (tool !== 'cable') endDraft();
   session.tool = tool;
   if (tool !== 'select') session.sel = null;
   if (tool !== 'room') session.template = null;
@@ -156,8 +174,8 @@ export function setTool(tool) {
 export function summarize(p = plan) {
   const types = SYMBOL_TYPES.filter(k => SYMBOLS[k].circuit && SYMBOLS[k].boca);
   const blank = () => ({ counts: Object.fromEntries(types.map(k => [k, 0])), total: 0 });
-  const rows = p.circuits.map((c, i) => ({ id: c.id, n: i + 1, name: c.name, color: c.color, ...blank() }));
-  const orphan = blank();
+  const rows = p.circuits.map((c, i) => ({ id: c.id, n: i + 1, name: c.name, color: c.color, cableM: 0, ...blank() }));
+  const orphan = { cableM: 0, ...blank() };
   const other = {};
   for (const it of p.items) {
     const sym = SYMBOLS[it.type];
@@ -166,13 +184,28 @@ export function summarize(p = plan) {
     const row = rows.find(r => r.id === it.c) || orphan;
     row.counts[it.type]++; row.total++;
   }
+  // metros de cable aproximados por circuito (largo del recorrido / escala del plano)
+  for (const cb of p.cables || []) {
+    let len = 0;
+    for (let i = 1; i < cb.pts.length; i++) len += Math.hypot(cb.pts[i][0] - cb.pts[i - 1][0], cb.pts[i][1] - cb.pts[i - 1][1]);
+    (rows.find(r => r.id === cb.c) || orphan).cableM += len / U;
+  }
+  [...rows, orphan].forEach(r => { r.cableM = Math.round(r.cableM * 10) / 10; });
   const total = rows.reduce((a, r) => a + r.total, orphan.total);
-  return { rows, orphan: orphan.total ? orphan : null, other, total };
+  const cableTotal = Math.round([...rows, orphan].reduce((a, r) => a + r.cableM, 0) * 10) / 10;
+  return { rows, orphan: orphan.total || orphan.cableM ? orphan : null, other, total, cableTotal };
 }
 
 // "3 luces · 2 llaves" (solo los tipos con cantidad)
 export const countsText = counts =>
   Object.entries(counts).filter(([, n]) => n).map(([k, n]) => tn(`count.${k}`, n)).join(' · ') || '—';
+
+// Detalle de una fila de la leyenda: "3 luces · 2 llaves · ≈ 12 m de cable"
+export function describeRow(r) {
+  const parts = Object.entries(r.counts).filter(([, n]) => n).map(([k, n]) => tn(`count.${k}`, n));
+  if (r.cableM > 0) parts.push(t('legend.cable', { m: fmtNum(r.cableM) }));
+  return parts.join(' · ') || '—';
+}
 
 // Datos técnicos de un circuito en una línea: "Prot. 2x16 A · Cable 2,5 mm² · Dif. 2x40 A 30 mA — nota"
 export function techText(c) {

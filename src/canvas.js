@@ -44,6 +44,36 @@ function symbolMarkup(it) {
   return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="20" fill="transparent"/>${ring}${drawSymbol(it, col)}${tag}</g>`;
 }
 
+const pointsAttr = pts => pts.map(q => q.join(',')).join(' ');
+
+function cableMarkup(cb) {
+  const c = circuitOf(cb.c), col = c ? c.color : '#5d6b78';
+  const sel = session.sel && session.sel.kind === 'cable' && session.sel.id === cb.id;
+  const pts = pointsAttr(cb.pts), cap = 'stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  let h = `<g data-k="cable" data-id="${cb.id}" style="cursor:pointer">` +
+    `<polyline points="${pts}" stroke="transparent" stroke-width="22" ${cap}/>` +
+    `<polyline points="${pts}" stroke="var(--room)" stroke-width="${sel ? 8 : 6}" opacity=".9" ${cap}/>` +
+    `<polyline points="${pts}" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" ${cap}/></g>`;
+  if (session.draft && session.draft.id === cb.id) {
+    // en trazado: puntos chicos, sin interacción
+    h += cb.pts.map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="4.5" fill="var(--room)" stroke="${col}" stroke-width="2" pointer-events="none"/>`).join('');
+  } else if (sel && session.tool === 'select') {
+    for (let i = 0; i < cb.pts.length - 1; i++) {                       // "+" en el medio de cada tramo largo
+      const a = cb.pts[i], b = cb.pts[i + 1];
+      if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 30) continue;
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      h += `<g data-k="midpt" data-id="${cb.id}" data-i="${i}" style="cursor:copy"><circle cx="${mx}" cy="${my}" r="14" fill="transparent"/>` +
+        `<circle cx="${mx}" cy="${my}" r="7" fill="var(--sel)" opacity=".85"/><path d="M${mx - 3.5} ${my}h7M${mx} ${my - 3.5}v7" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></g>`;
+    }
+    h += cb.pts.map((q, i) => {
+      const on = session.sel.vi === i;
+      return `<g data-k="vertex" data-id="${cb.id}" data-i="${i}" style="cursor:move"><circle cx="${q[0]}" cy="${q[1]}" r="15" fill="transparent"/>` +
+        `<circle cx="${q[0]}" cy="${q[1]}" r="6.5" fill="${on ? 'var(--sel)' : 'var(--room)'}" stroke="var(--sel)" stroke-width="2.5"/></g>`;
+    }).join('');
+  }
+  return h;
+}
+
 function labelMarkup(l) {
   const w = Math.max(24, l.text.length * 7.4 + 10), h = 20;
   const isSel = session.sel && session.sel.kind === 'label' && session.sel.id === l.id;
@@ -65,6 +95,7 @@ export function renderCanvas() {
       ${isSel && session.tool === 'select' ? `<g data-k="handle" data-id="${r.id}" style="cursor:nwse-resize"><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="22" fill="transparent"/><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2"/></g>` : ''}
     </g>`;
   }
+  for (const cb of plan.cables) h += cableMarkup(cb);
   for (const it of plan.items) if (SYMBOLS[it.type]) h += symbolMarkup(it);
   for (const l of plan.labels) h += labelMarkup(l);
   scene.innerHTML = h;
@@ -77,7 +108,7 @@ function down(e) {
 
   if (pointers.size === 2) {
     // segundo dedo: cancelar el gesto en curso y pasar a pinch
-    if (drag && drag.type !== 'pan') handlers.cancel(drag);
+    if (drag && drag.type !== 'pan' && !drag.panning) handlers.cancel(drag);
     drag = null;
     const [a, b] = [...pointers.values()];
     pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: view.s };
@@ -86,8 +117,10 @@ function down(e) {
   if (pointers.size > 2) return;
 
   const el = e.target.closest ? e.target.closest('[data-k]') : null;
-  const hit = el ? { k: el.dataset.k, id: el.dataset.id } : null;
-  drag = handlers.down(toWorld(e), hit) || { type: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+  const hit = el ? { k: el.dataset.k, id: el.dataset.id, i: el.dataset.i } : null;
+  drag = handlers.down(toWorld(e), hit, e) || { type: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+  // gesto "toque": si el dedo se mueve más de 10 px pasa a ser desplazamiento del plano
+  if (drag.tap) { drag.sx = e.clientX; drag.sy = e.clientY; drag.vx = view.x; drag.vy = view.y; }
 }
 
 function move(e) {
@@ -99,7 +132,8 @@ function move(e) {
     return;
   }
   if (!drag) return;
-  if (drag.type === 'pan') {
+  if (drag.tap && !drag.panning && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 10) drag.panning = true;
+  if (drag.type === 'pan' || drag.panning) {
     view.x = drag.vx + (e.clientX - drag.sx);
     view.y = drag.vy + (e.clientY - drag.sy);
     applyView();
@@ -112,7 +146,7 @@ function up(e) {
   if (!drag) return;
   const d = drag;
   drag = null;
-  if (d.type !== 'pan') handlers.up(d);
+  if (d.type !== 'pan' && !d.panning) handlers.up(d);
 }
 
 export function initCanvas(h) {
