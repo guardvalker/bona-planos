@@ -58,6 +58,11 @@ const STR = {
     'cl.1_0_0.b': 'Varios planos guardados en el dispositivo, con deshacer y rehacer.',
     'cl.1_0_0.c': 'Exportar a PNG, SVG, PDF/impresión y JSON, con leyenda de circuitos.',
     'cl.1_0_0.d': 'Se instala y funciona sin conexión.',
+
+    'lang.label': 'Idioma',
+    'lang.es': 'Español',
+    'lang.en': 'English',
+    'cl.1_0_1': 'La app siempre arranca en español; el inglés se elige en Novedades > Idioma.',
     'ask.ok': 'Aceptar',
     'ask.cancel': 'Cancelar',
 
@@ -183,6 +188,11 @@ const STR = {
     'cl.1_0_0.b': 'Several plans saved on the device, with undo and redo.',
     'cl.1_0_0.c': 'Export to PNG, SVG, PDF/print and JSON, with a circuit legend.',
     'cl.1_0_0.d': 'Installable and works offline.',
+
+    'lang.label': 'Language',
+    'lang.es': 'Español',
+    'lang.en': 'English',
+    'cl.1_0_1': 'The app always starts in Spanish; English is chosen in What’s new > Language.',
     'ask.ok': 'OK',
     'ask.cancel': 'Cancel',
 
@@ -253,7 +263,13 @@ const STR = {
   }
 };
 
-export const lang = (navigator.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
+// Español (es-AR) por defecto, sin importar el idioma del navegador; el inglés se elige a mano.
+const LANG_KEY = 'bona-planos:lang';
+export const lang = (() => { try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'es'; } catch (e) { return 'es'; } })();
+export function setLang(l) {
+  try { localStorage.setItem(LANG_KEY, l); } catch (e) { /* sin storage: no se recuerda */ }
+  location.reload();
+}
 
 export function t(key, params) {
   let s = (STR[lang] && STR[lang][key]) ?? STR.es[key] ?? key;

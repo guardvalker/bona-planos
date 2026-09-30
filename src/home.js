@@ -1,7 +1,7 @@
 // Pantalla de inicio: lista de planos (crear, abrir, renombrar, duplicar, borrar).
 import { newPlan, uid } from './state.js';
 import { APP_VERSION, CHANGELOG } from './version.js';
-import { t, tn, lang } from './i18n.js';
+import { t, tn, lang, setLang } from './i18n.js';
 import { esc } from './canvas.js';
 import { readPlanFile } from './export.js';
 import { listPlans, loadPlan, savePlan, removePlan, persistent } from './storage.js';
@@ -82,6 +82,10 @@ export function initHome({ open }) {
     $('#about').classList.add('show');
     $('#abClose').focus();
   });
+  $('#lEs').addEventListener('click', () => setLang('es'));
+  $('#lEn').addEventListener('click', () => setLang('en'));
+  $('#lEs').setAttribute('aria-pressed', lang === 'es');
+  $('#lEn').setAttribute('aria-pressed', lang === 'en');
   $('#abClose').addEventListener('click', () => $('#about').classList.remove('show'));
   $('#about').addEventListener('keydown', e => { if (e.key === 'Escape') $('#about').classList.remove('show'); });
   // Actualización manual: borra caches y service workers y recarga (no depende de que sw.js haya cambiado).
