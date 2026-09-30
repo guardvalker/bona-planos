@@ -1,10 +1,10 @@
 // Cache-first de la app shell. Al cambiar CUALQUIER archivo de ASSETS hay que
 // subir CACHE_NAME: si no, las instalaciones existentes siguen viendo la versión vieja.
-const CACHE_NAME = 'bona-planos-v7';
+const CACHE_NAME = 'bona-planos-v10';
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest',
   './src/main.js', './src/state.js', './src/canvas.js', './src/tools.js', './src/ui.js',
-  './src/storage.js', './src/i18n.js', './src/symbols.js', './src/home.js', './src/export.js', './src/version.js',
+  './src/storage.js', './src/i18n.js', './src/symbols.js', './src/home.js', './src/export.js', './src/version.js', './src/dialogs.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-180.png', './icons/icon-512-maskable.png'
 ];
 

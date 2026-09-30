@@ -4,29 +4,11 @@ import { APP_VERSION, CHANGELOG } from './version.js';
 import { t, tn, lang, setLang } from './i18n.js';
 import { esc } from './canvas.js';
 import { readPlanFile } from './export.js';
+import { askText } from './dialogs.js';
 import { listPlans, loadPlan, savePlan, removePlan, persistent } from './storage.js';
 
 const $ = s => document.querySelector(s);
 const fmtDate = iso => new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-
-/* ---------- diálogo de texto (reemplaza a prompt()) ---------- */
-export function askText(title, value) {
-  return new Promise(resolve => {
-    const box = $('#ask'), input = $('#aInput'), form = box.querySelector('form');
-    $('#aTitle').textContent = title;
-    input.value = value;
-    box.classList.add('show');
-    input.focus(); input.select();
-    const done = v => {
-      box.classList.remove('show');
-      form.onsubmit = null; $('#aCancel').onclick = null; box.onkeydown = null;
-      resolve(v);
-    };
-    form.onsubmit = e => { e.preventDefault(); done(input.value.trim()); };
-    $('#aCancel').onclick = () => done(null);
-    box.onkeydown = e => { if (e.key === 'Escape') done(null); };
-  });
-}
 
 /* ---------- acciones ---------- */
 export async function createPlan(plans) {

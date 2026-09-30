@@ -1,14 +1,14 @@
 // Barra de herramientas, chips de circuitos, panel de selección y diálogo de datos.
 import {
   getPlan, session, circuitOf, circuitIndex, checkpoint, notify, summarize, countsText, normalize,
-  replacePlan, undo, redo, canUndo, canRedo
+  replacePlan, undo, redo, canUndo, canRedo, techText, ROOM_TEMPLATES
 } from './state.js';
 import { exportPng, exportSvg, printPlan, exportJson, readPlanFile } from './export.js';
-import { SYMBOLS, SYMBOL_TYPES } from './symbols.js';
-import { t, tn } from './i18n.js';
+import { SYMBOLS, SYMBOL_TYPES, symbolIcon } from './symbols.js';
+import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
-  setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit
+  setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection, armTemplate
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -18,9 +18,12 @@ const cLabel = c => `${cShort(c.id)} ${esc(c.name)}`;
 /* ---------- barra ---------- */
 function buildBar() {
   const btn = (tool, label) => `<button data-tool="${tool}">${esc(label)}</button>`;
+  // Los símbolos son solo ícono (dibujados desde el registro): con 10 no entran con texto en 360 px.
+  const sym = k => `<button data-tool="${k}" class="sym" aria-label="${esc(t(`sym.${k}.btn`))}" title="${esc(t(`sym.${k}.btn`))}">${symbolIcon(k)}</button>`;
   $('#bar').innerHTML =
-    btn('select', t('tool.select')) + btn('room', t('tool.room')) + '<span class="sep"></span>' +
-    SYMBOL_TYPES.map(k => btn(k, t(`sym.${k}.btn`))).join('') + '<span class="sep"></span>' +
+    btn('select', t('tool.select')) + btn('room', t('tool.room')) +
+    `<button id="bTpl">${t('tool.template')}</button><span class="sep"></span>` +
+    SYMBOL_TYPES.map(sym).join('') + btn('label', t('tool.label')) + '<span class="sep"></span>' +
     `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
     `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));
@@ -41,7 +44,8 @@ function renderHint() {
   const plan = getPlan(), tool = session.tool;
   let s;
   if (tool === 'select') s = t('hint.select');
-  else if (tool === 'room') s = t('hint.room');
+  else if (tool === 'room') s = session.template ? t('hint.template', { name: t(`tpl.${session.template.key}`) }) : t('hint.room');
+  else if (tool === 'label') s = t('hint.label');
   else {
     const c = circuitOf(plan.active);
     s = t('hint.place', { put: t(`sym.${tool}.put`) });
@@ -74,11 +78,18 @@ function editOnce(input, fn) {
 function renderSel() {
   const plan = getPlan(), sel = session.sel, el = $('#selrow');
   if (!sel) { el.innerHTML = `<span class="lbl">${t('sel.none')}</span>`; return; }
+  const del = `<button id="bDel" class="danger">${t('sel.delete')}</button>`;
+  const rot = `<button id="bRot">${t('sel.rotate')}</button>`;
   if (sel.kind === 'room') {
     const r = plan.rooms.find(x => x.id === sel.id);
     if (!r) { el.innerHTML = ''; return; }
-    el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}"><button id="bDel" class="danger">${t('sel.delete')}</button>`;
+    el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}">${del}`;
     editOnce($('#rname'), v => { r.name = v; });
+  } else if (sel.kind === 'label') {
+    const l = plan.labels.find(x => x.id === sel.id);
+    if (!l) { el.innerHTML = ''; return; }
+    el.innerHTML = `<span class="lbl">${t('label.label')}</span><input id="ltext" type="text" value="${esc(l.text)}" maxlength="120" aria-label="${t('label.text')}">${rot}${del}`;
+    editOnce($('#ltext'), v => { l.text = v; });
   } else {
     const it = plan.items.find(x => x.id === sel.id);
     if (!it) { el.innerHTML = ''; return; }
@@ -87,34 +98,45 @@ function renderSel() {
     const label = sym.circuit
       ? t('sel.item', { name: name[0].toUpperCase() + name.slice(1), circuit: c ? cLabel(c) : t('circuit.none') }) + t('sel.reassign')
       : name[0].toUpperCase() + name.slice(1);
-    el.innerHTML = `<span class="lbl">${label}</span><button id="bDel" class="danger">${t('sel.delete')}</button>`;
+    el.innerHTML = `<span class="lbl">${label}</span>${rot}${del}`;
   }
   $('#bDel').addEventListener('click', deleteSelection);
+  const br = $('#bRot');
+  if (br) br.addEventListener('click', rotateSelection);
 }
 
 /* ---------- editor de circuitos ---------- */
+const TECH_FIELDS = ['prot', 'cable', 'rcd', 'notes'];
+
 function renderCircuitEditor() {
   $('#clist').innerHTML = getPlan().circuits.map((c, i) => `
-    <div class="crow" data-id="${c.id}">
-      <b>${t('circuit.short', { n: i + 1 })}</b>
-      <input type="color" value="${c.color}" aria-label="${t('circuit.color', { n: i + 1 })}">
-      <input type="text" value="${esc(c.name)}" aria-label="${t('circuit.name', { n: i + 1 })}">
-      <button class="danger" data-del="${c.id}" aria-label="${t('circuit.del', { n: i + 1 })}">✕</button>
+    <div class="cblock" data-id="${c.id}">
+      <div class="crow">
+        <b>${t('circuit.short', { n: i + 1 })}</b>
+        <input type="color" value="${c.color}" aria-label="${t('circuit.color', { n: i + 1 })}">
+        <input type="text" value="${esc(c.name)}" aria-label="${t('circuit.name', { n: i + 1 })}">
+        <button class="danger" data-del="${c.id}" aria-label="${t('circuit.del', { n: i + 1 })}">✕</button>
+      </div>
+      <div class="tech">
+        ${TECH_FIELDS.map(f => `<label><span>${t(`tech.${f}`)}</span><input type="text" data-f="${f}" value="${esc(c[f] || '')}" placeholder="${esc(t(`tech.${f}.ph`))}" maxlength="${f === 'notes' ? 200 : 60}"></label>`).join('')}
+      </div>
     </div>`).join('');
-  document.querySelectorAll('#clist .crow').forEach(row => {
-    const c = circuitOf(row.dataset.id);
-    const [color, name] = row.querySelectorAll('input');
+  document.querySelectorAll('#clist .cblock').forEach(block => {
+    const c = circuitOf(block.dataset.id);
+    const [color, name] = block.querySelectorAll('.crow input');
     editOnce(color, v => { c.color = v; });
     editOnce(name, v => { c.name = v; });
+    block.querySelectorAll('.tech input').forEach(inp => editOnce(inp, v => { c[inp.dataset.f] = v; }));
   });
 }
 
 /* ---------- leyenda y resumen ---------- */
 function renderLegend() {
   const sum = summarize();
-  const row = (color, label, detail, total) =>
-    `<div class="lrow"><i style="background:${color}"></i><span class="ln">${esc(label)}</span><span class="lc">${esc(detail)}</span><b>${tn('count.boca', total)}</b></div>`;
-  let h = sum.rows.map(r => row(r.color, `${cShort(r.id)} ${r.name}`, countsText(r.counts), r.total)).join('');
+  const row = (color, label, detail, total, tech = '') =>
+    `<div class="lrow"><i style="background:${color}"></i><span class="ln">${esc(label)}</span><span class="lc">${esc(detail)}</span><b>${tn('count.boca', total)}</b>` +
+    (tech ? `<span class="ltech">${esc(tech)}</span>` : '') + '</div>';
+  let h = sum.rows.map(r => row(r.color, `${cShort(r.id)} ${r.name}`, countsText(r.counts), r.total, techText(getPlan().circuits[r.n - 1]))).join('');
   if (sum.orphan) h += row('#8b9aa8', t('circuit.none'), countsText(sum.orphan.counts), sum.orphan.total);
   const other = Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)).join(' · ');
   if (other) h += `<div class="lrow"><span class="lc">${esc(other)}</span></div>`;
@@ -151,6 +173,14 @@ export function initUI({ goHome }) {
     const b = e.target.closest('[data-tool]');
     if (b) setTool(b.dataset.tool);
   });
+  $('#bTpl').addEventListener('click', () => { $('#tpl').classList.add('show'); $('#tplList button').focus(); });
+  $('#tplList').innerHTML = ROOM_TEMPLATES.map(x =>
+    `<button data-tpl="${x.key}">${esc(t(`tpl.${x.key}`))} <small>${fmtNum(x.w)} × ${fmtNum(x.h)} m</small></button>`).join('');
+  $('#tplList').addEventListener('click', e => {
+    const b = e.target.closest('[data-tpl]');
+    if (b) { $('#tpl').classList.remove('show'); armTemplate(b.dataset.tpl); }
+  });
+  $('#tplClose').addEventListener('click', () => $('#tpl').classList.remove('show'));
   $('#bUndo').addEventListener('click', undo);
   $('#bRedo').addEventListener('click', redo);
   $('#bClear').addEventListener('click', clearPlan);
@@ -214,6 +244,7 @@ export function initUI({ goHome }) {
     else if (e.key === 'Escape') {
       if ($('#modal').classList.contains('show')) closeModal();
       else if ($('#exp').classList.contains('show')) closeExport();
+      else if ($('#tpl').classList.contains('show')) $('#tpl').classList.remove('show');
       else setTool('select');
     }
   });

@@ -2,7 +2,7 @@
 // Lo que pasa al tocar/arrastrar lo decide tools.js; acá solo se traducen los
 // eventos a coordenadas del mundo y se maneja el desplazamiento y el zoom.
 import { getPlan, session, circuitOf, circuitIndex, clamp, U } from './state.js';
-import { SYMBOLS } from './symbols.js';
+import { SYMBOLS, drawSymbol } from './symbols.js';
 import { t, fmtNum } from './i18n.js';
 
 const $ = s => document.querySelector(s);
@@ -41,7 +41,15 @@ function symbolMarkup(it) {
   const isSel = session.sel && session.sel.kind === 'item' && session.sel.id === it.id;
   const ring = isSel ? `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="var(--sel)" stroke-width="2" stroke-dasharray="4 3"/>` : '';
   const tag = (sym.circuit && c) ? `<text class="t-tag" x="${x}" y="${y + 22}">${t('circuit.short', { n: circuitIndex(it.c) + 1 })}</text>` : '';
-  return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="20" fill="transparent"/>${ring}${sym.draw(x, y, col)}${tag}</g>`;
+  return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="20" fill="transparent"/>${ring}${drawSymbol(it, col)}${tag}</g>`;
+}
+
+function labelMarkup(l) {
+  const w = Math.max(24, l.text.length * 7.4 + 10), h = 20;
+  const isSel = session.sel && session.sel.kind === 'label' && session.sel.id === l.id;
+  const box = `<rect x="${l.x - w / 2}" y="${l.y - h / 2}" width="${w}" height="${h}" rx="4" fill="transparent"${isSel ? ' stroke="var(--sel)" stroke-width="1.5" stroke-dasharray="4 3"' : ''}/>`;
+  return `<g data-k="label" data-id="${l.id}" style="cursor:pointer"${l.rot ? ` transform="rotate(${l.rot} ${l.x} ${l.y})"` : ''}>${box}` +
+    `<text class="t-label" x="${l.x}" y="${l.y + 4.5}">${esc(l.text)}</text></g>`;
 }
 
 export function renderCanvas() {
@@ -58,6 +66,7 @@ export function renderCanvas() {
     </g>`;
   }
   for (const it of plan.items) if (SYMBOLS[it.type]) h += symbolMarkup(it);
+  for (const l of plan.labels) h += labelMarkup(l);
   scene.innerHTML = h;
 }
 

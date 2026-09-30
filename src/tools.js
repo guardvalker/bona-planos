@@ -1,9 +1,10 @@
 // Herramientas: qué hace cada gesto sobre el plano y las acciones de edición.
 // Los gestos usan `checkpoint()` antes de mutar, una sola vez por gesto.
 import {
-  getPlan, session, snap, uid, SNAP, ISNAP, PALETTE, circuitOf,
+  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, ROOM_TEMPLATES, circuitOf,
   checkpoint, dropCheckpoint, notify, setTool
 } from './state.js';
+import { askText } from './dialogs.js';
 import { SYMBOLS } from './symbols.js';
 import { t } from './i18n.js';
 
@@ -16,6 +17,29 @@ export const handlers = {
     const plan = getPlan();
     const tool = session.tool;
 
+    if (tool === 'room' && session.template) {
+      // plantilla: un toque ubica el ambiente con medidas típicas
+      const tpl = session.template;
+      checkpoint();
+      const r = { id: uid(), x: snap(p.x), y: snap(p.y), w: Math.round(tpl.w * U), h: Math.round(tpl.h * U), name: t(`tpl.${tpl.key}`) };
+      plan.rooms.push(r);
+      session.sel = { kind: 'room', id: r.id };
+      session.template = null; session.tool = 'select';
+      notify('data');
+      return { type: 'place' };
+    }
+    if (tool === 'label') {
+      const x = snap(p.x, ISNAP), y = snap(p.y, ISNAP);
+      askText(t('label.prompt'), '').then(text => {
+        if (!text) return;
+        const id = uid();
+        checkpoint();
+        getPlan().labels.push({ id, x, y, text, rot: 0 });
+        session.sel = { kind: 'label', id }; session.tool = 'select';
+        notify('data');
+      });
+      return { type: 'place' };
+    }
     if (tool === 'room') {
       checkpoint();
       const x = snap(p.x), y = snap(p.y);
@@ -27,7 +51,7 @@ export const handlers = {
     }
     if (isPlaceTool(tool)) {
       checkpoint();
-      plan.items.push({ id: uid(), type: tool, x: snap(p.x, ISNAP), y: snap(p.y, ISNAP), c: SYMBOLS[tool].circuit ? plan.active : null });
+      plan.items.push({ id: uid(), type: tool, x: snap(p.x, ISNAP), y: snap(p.y, ISNAP), c: SYMBOLS[tool].circuit ? plan.active : null, rot: 0 });
       notify('data');
       return { type: 'place' };
     }
@@ -36,7 +60,7 @@ export const handlers = {
     if (hit.k === 'handle') {
       return { type: 'resize', r: plan.rooms.find(r => r.id === hit.id), pushed: false };
     }
-    const obj = (hit.k === 'room' ? plan.rooms : plan.items).find(o => o.id === hit.id);
+    const obj = { room: plan.rooms, item: plan.items, label: plan.labels }[hit.k].find(o => o.id === hit.id);
     if (!obj) return null;
     session.sel = { kind: hit.k, id: hit.id };
     const d = { type: 'move', obj, kind: hit.k, dx: p.x - obj.x, dy: p.y - obj.y, pushed: false };
@@ -95,6 +119,7 @@ export function deleteSelection() {
   if (!sel) return;
   checkpoint();
   if (sel.kind === 'room') plan.rooms = plan.rooms.filter(r => r.id !== sel.id);
+  else if (sel.kind === 'label') plan.labels = plan.labels.filter(l => l.id !== sel.id);
   else plan.items = plan.items.filter(i => i.id !== sel.id);
   session.sel = null;
   notify('data');
@@ -102,12 +127,30 @@ export function deleteSelection() {
 
 export function clearPlan() {
   const plan = getPlan();
-  if (!plan.rooms.length && !plan.items.length) return;
+  if (!plan.rooms.length && !plan.items.length && !plan.labels.length) return;
   if (!confirm(t('clear.confirm'))) return;
   checkpoint();
-  plan.rooms = []; plan.items = [];
+  plan.rooms = []; plan.items = []; plan.labels = [];
   session.sel = null;
   notify('data');
+}
+
+// Gira 90° el elemento o la etiqueta seleccionados.
+export function rotateSelection() {
+  const sel = session.sel, plan = getPlan();
+  if (!sel || sel.kind === 'room') return;
+  const obj = (sel.kind === 'item' ? plan.items : plan.labels).find(o => o.id === sel.id);
+  if (!obj) return;
+  checkpoint();
+  obj.rot = ((obj.rot || 0) + 90) % 360;
+  notify('data');
+}
+
+// Elegir una plantilla arma la herramienta Ambiente: el próximo toque la ubica.
+export function armTemplate(key) {
+  session.template = ROOM_TEMPLATES.find(x => x.key === key) || null;
+  session.tool = 'room'; session.sel = null;
+  notify('ui');
 }
 
 // Tocar un chip: activa el circuito y, si hay un elemento seleccionado, se lo reasigna.
