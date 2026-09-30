@@ -166,3 +166,11 @@ button.primary{background:var(--accent);color:var(--btn-on-ink);border-color:var
 .tech label:last-child{grid-column:1 / -1}
 .tech input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px;min-width:0}
 .lrow .ltech{flex-basis:100%;color:var(--mute);font-size:12px;padding-left:20px}
+
+/* ---------- sync opcional ---------- */
+#hCloud{background:none;border:0;color:var(--mute);text-decoration:underline}
+#syncNotes .note{background:var(--panel);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;font-size:13px;margin:6px 0}
+.notes-ok{margin-bottom:6px}
+#acct .help{font-size:13px;color:var(--mute);margin:0}
+#acct p{margin:0}
+#acct input{width:100%}

@@ -35,11 +35,18 @@ export async function loadPlan(id) {
   const d = await run('readonly', s => s ? s.get(id) : (memory.get(id)));
   return d ? normalize(d) : null;
 }
-export async function savePlan(plan) {
+// Los cambios hechos por el usuario avisan a quien escuche (el sync opcional). Los que hace el
+// propio sync pasan `{ silent: true }` para no disparar otra ronda.
+const listeners = { saved: new Set(), removed: new Set() };
+export const onStorage = (ev, fn) => { listeners[ev].add(fn); };
+
+export async function savePlan(plan, { silent = false } = {}) {
   await run('readwrite', s => s ? s.put(plan) : (memory.set(plan.id, structuredClone(plan))));
+  if (!silent) listeners.saved.forEach(fn => fn(plan));
 }
-export async function removePlan(id) {
+export async function removePlan(id, { silent = false } = {}) {
   await run('readwrite', s => s ? s.delete(id) : (memory.delete(id)));
+  if (!silent) listeners.removed.forEach(fn => fn(id));
 }
 
 // Pide que el navegador no borre los planos por falta de espacio.
