@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#18222c">
+<title>Plano eléctrico rápido</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="bar" role="toolbar"></div>
+<div id="hint" aria-live="polite"></div>
+
+<div id="stage">
+  <svg id="cv" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="g1" width="10" height="10" patternUnits="userSpaceOnUse">
+        <path d="M10 0H0V10" fill="none" stroke="var(--grid2)" stroke-width="1"/>
+      </pattern>
+      <pattern id="g4" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M40 0H0V40" fill="none" stroke="var(--grid)" stroke-width="1.2"/>
+      </pattern>
+    </defs>
+    <g id="world">
+      <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#g1)" pointer-events="none"/>
+      <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#g4)" pointer-events="none"/>
+      <g id="scene"></g>
+    </g>
+  </svg>
+  <div id="zoom">
+    <button id="zIn" data-i18n-aria="zoom.in">+</button>
+    <button id="zOut" data-i18n-aria="zoom.out">−</button>
+  </div>
+</div>
+
+<div id="dock">
+  <div id="chips" data-i18n-aria="circuit.list"></div>
+  <div id="selrow"></div>
+  <details id="cedit">
+    <summary data-i18n="circuit.edit"></summary>
+    <div id="clist"></div>
+    <button id="cAdd" data-i18n="circuit.add"></button>
+  </details>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="box">
+    <strong id="mTitle" data-i18n="data.title"></strong>
+    <div class="help" data-i18n="data.help"></div>
+    <textarea id="json" spellcheck="false"></textarea>
+    <div id="msg" aria-live="polite"></div>
+    <div class="row">
+      <button id="mCopy" data-i18n="data.copy"></button>
+      <button id="mLoad" data-i18n="data.load"></button>
+      <button id="mClose" data-i18n="data.close"></button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
