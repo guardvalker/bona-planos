@@ -1,0 +1,17 @@
+{
+  "name": "Plano eléctrico rápido",
+  "short_name": "Planos",
+  "description": "Dibujá un plano 2D y marcá tomas, luces, llaves y tablero por circuito. Funciona sin conexión.",
+  "lang": "es-AR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#18222c",
+  "theme_color": "#18222c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
