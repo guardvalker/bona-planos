@@ -114,6 +114,8 @@ export function render(kind) {
   renderCanvas(); renderChips(); renderHint();
   if (kind === 'soft') return;
   renderBar(); renderSel(); renderCircuitEditor();
+  const pn = $('#pname');
+  if (document.activeElement !== pn) pn.value = getPlan().name;
 }
 
 /* ---------- diálogo guardar / cargar ---------- */
@@ -125,8 +127,10 @@ function openModal() {
 }
 const closeModal = () => $('#modal').classList.remove('show');
 
-export function initUI() {
+export function initUI({ goHome }) {
   buildBar();
+  $('#bBack').addEventListener('click', goHome);
+  editOnce($('#pname'), v => { getPlan().name = v; });
 
   $('#bar').addEventListener('click', e => {
     const b = e.target.closest('[data-tool]');

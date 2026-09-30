@@ -12,8 +12,22 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-view="home">
 
+<main id="home">
+  <div class="home-top">
+    <h1 data-i18n="home.title"></h1>
+    <button id="hNew" class="primary" data-i18n="home.new"></button>
+  </div>
+  <p id="hWarn" class="warn" hidden data-i18n="home.notPersistent"></p>
+  <div id="hList" data-i18n-aria="home.list"></div>
+</main>
+
+<div id="editor">
+<header id="head">
+  <button id="bBack" data-i18n-aria="nav.backAria">‹ <span data-i18n="nav.back"></span></button>
+  <input id="pname" type="text" maxlength="80" data-i18n-aria="plan.name">
+</header>
 <div id="bar" role="toolbar"></div>
 <div id="hint" aria-live="polite"></div>
 
@@ -48,6 +62,7 @@
     <button id="cAdd" data-i18n="circuit.add"></button>
   </details>
 </div>
+</div>
 
 <div id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="box">
@@ -61,6 +76,17 @@
       <button id="mClose" data-i18n="data.close"></button>
     </div>
   </div>
+</div>
+
+<div id="ask" class="overlay" role="dialog" aria-modal="true" aria-labelledby="aTitle">
+  <form class="box">
+    <strong id="aTitle"></strong>
+    <input id="aInput" type="text" maxlength="80">
+    <div class="row">
+      <button type="submit" id="aOk" data-i18n="ask.ok"></button>
+      <button type="button" id="aCancel" data-i18n="ask.cancel"></button>
+    </div>
+  </form>
 </div>
 
 <script type="module" src="src/main.js"></script>

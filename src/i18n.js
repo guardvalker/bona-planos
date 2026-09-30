@@ -5,6 +5,29 @@ const STR = {
     'app.name': 'Planos',
     'app.title': 'Plano eléctrico rápido',
 
+    'nav.back': 'Planos',
+    'nav.backAria': 'Volver a la lista de planos',
+    'plan.name': 'Nombre del plano',
+    'plan.default': 'Plano {n}',
+    'plan.unnamed': 'Sin nombre',
+    'plan.copySuffix': ' (copia)',
+    'plan.rename': 'Renombrar',
+    'plan.duplicate': 'Duplicar',
+    'plan.delete': 'Borrar',
+    'plan.deleteConfirm': '¿Borrar «{name}»? No se puede deshacer.',
+    'plan.renameTitle': 'Nombre del plano',
+    'home.title': 'Mis planos',
+    'home.new': 'Nuevo plano',
+    'home.empty': 'Todavía no tenés planos. Creá el primero.',
+    'home.list': 'Planos guardados',
+    'home.notPersistent': 'Este navegador no permite guardar planos: se pierden al cerrar la app.',
+    'count.room.one': '{n} ambiente',
+    'count.room.other': '{n} ambientes',
+    'count.item.one': '{n} elemento',
+    'count.item.other': '{n} elementos',
+    'ask.ok': 'Aceptar',
+    'ask.cancel': 'Cancelar',
+
     'tool.select': 'Mover',
     'tool.room': 'Ambiente',
     'sym.toma.btn': 'Toma',
@@ -73,6 +96,29 @@ const STR = {
   en: {
     'app.name': 'Plans',
     'app.title': 'Quick electrical plan',
+
+    'nav.back': 'Plans',
+    'nav.backAria': 'Back to the plan list',
+    'plan.name': 'Plan name',
+    'plan.default': 'Plan {n}',
+    'plan.unnamed': 'Untitled',
+    'plan.copySuffix': ' (copy)',
+    'plan.rename': 'Rename',
+    'plan.duplicate': 'Duplicate',
+    'plan.delete': 'Delete',
+    'plan.deleteConfirm': 'Delete «{name}»? This cannot be undone.',
+    'plan.renameTitle': 'Plan name',
+    'home.title': 'My plans',
+    'home.new': 'New plan',
+    'home.empty': 'You have no plans yet. Create the first one.',
+    'home.list': 'Saved plans',
+    'home.notPersistent': 'This browser cannot save plans: they are lost when the app closes.',
+    'count.room.one': '{n} room',
+    'count.room.other': '{n} rooms',
+    'count.item.one': '{n} item',
+    'count.item.other': '{n} items',
+    'ask.ok': 'OK',
+    'ask.cancel': 'Cancel',
 
     'tool.select': 'Move',
     'tool.room': 'Room',
@@ -148,6 +194,9 @@ export function t(key, params) {
   if (params) for (const k in params) s = s.replaceAll('{' + k + '}', params[k]);
   return s;
 }
+
+// Plural simple: usa la clave `<key>.one` si n === 1 y `<key>.other` en el resto.
+export const tn = (key, n) => t(`${key}.${n === 1 ? 'one' : 'other'}`, { n });
 
 // Números con el separador decimal del idioma, sin ceros de más (4,5 — 10).
 export const fmtNum = n => (+n.toFixed(2)).toLocaleString(lang === 'en' ? 'en-US' : 'es-AR', { maximumFractionDigits: 2 });

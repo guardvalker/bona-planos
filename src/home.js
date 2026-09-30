@@ -1,0 +1,93 @@
+// Pantalla de inicio: lista de planos (crear, abrir, renombrar, duplicar, borrar).
+import { newPlan, uid } from './state.js';
+import { t, tn, lang } from './i18n.js';
+import { esc } from './canvas.js';
+import { listPlans, loadPlan, savePlan, removePlan, persistent } from './storage.js';
+
+const $ = s => document.querySelector(s);
+const fmtDate = iso => new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+
+/* ---------- diálogo de texto (reemplaza a prompt()) ---------- */
+export function askText(title, value) {
+  return new Promise(resolve => {
+    const box = $('#ask'), input = $('#aInput'), form = box.querySelector('form');
+    $('#aTitle').textContent = title;
+    input.value = value;
+    box.classList.add('show');
+    input.focus(); input.select();
+    const done = v => {
+      box.classList.remove('show');
+      form.onsubmit = null; $('#aCancel').onclick = null; box.onkeydown = null;
+      resolve(v);
+    };
+    form.onsubmit = e => { e.preventDefault(); done(input.value.trim()); };
+    $('#aCancel').onclick = () => done(null);
+    box.onkeydown = e => { if (e.key === 'Escape') done(null); };
+  });
+}
+
+/* ---------- acciones ---------- */
+export async function createPlan(plans) {
+  const p = newPlan(t('plan.default', { n: (plans ? plans.length : 0) + 1 }));
+  await savePlan(p);
+  return p.id;
+}
+
+async function duplicate(id) {
+  const p = await loadPlan(id);
+  if (!p) return;
+  p.id = crypto.randomUUID ? crypto.randomUUID() : uid() + uid();
+  p.name = (p.name || t('plan.unnamed')) + t('plan.copySuffix');
+  p.updatedAt = new Date().toISOString();
+  await savePlan(p);
+}
+
+async function rename(id) {
+  const p = await loadPlan(id);
+  if (!p) return;
+  const name = await askText(t('plan.renameTitle'), p.name);
+  if (name === null) return;
+  p.name = name; p.updatedAt = new Date().toISOString();
+  await savePlan(p);
+}
+
+/* ---------- render ---------- */
+export async function renderHome() {
+  $('#hWarn').hidden = persistent;
+  const plans = await listPlans();
+  const list = $('#hList');
+  if (!plans.length) { list.innerHTML = `<p class="empty">${t('home.empty')}</p>`; return; }
+  list.innerHTML = plans.map(p => `
+    <article class="pcard" data-id="${p.id}">
+      <button class="open" data-act="open">
+        <span class="pn">${esc(p.name || t('plan.unnamed'))}</span>
+        <span class="pm">${tn('count.room', p.rooms.length)} · ${tn('count.item', p.items.length)} · ${fmtDate(p.updatedAt)}</span>
+      </button>
+      <div class="acts">
+        <button data-act="rename">${t('plan.rename')}</button>
+        <button data-act="dup">${t('plan.duplicate')}</button>
+        <button data-act="del" class="danger">${t('plan.delete')}</button>
+      </div>
+    </article>`).join('');
+}
+
+// `open(id)` navega al editor; `created` lo llama main.js tras crear un plano.
+export function initHome({ open }) {
+  $('#hNew').addEventListener('click', async () => open(await createPlan(await listPlans())));
+  $('#hList').addEventListener('click', async e => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const id = b.closest('[data-id]').dataset.id;
+    switch (b.dataset.act) {
+      case 'open': open(id); return;
+      case 'rename': await rename(id); break;
+      case 'dup': await duplicate(id); break;
+      case 'del': {
+        const p = await loadPlan(id);
+        if (p && confirm(t('plan.deleteConfirm', { name: p.name || t('plan.unnamed') }))) await removePlan(id);
+        break;
+      }
+    }
+    renderHome();
+  });
+}
