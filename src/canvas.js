@@ -40,8 +40,8 @@ function symbolMarkup(it) {
   const { x, y } = it;
   const isSel = session.sel && session.sel.kind === 'item' && session.sel.id === it.id;
   const ring = isSel ? `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="var(--sel)" stroke-width="2" stroke-dasharray="4 3"/>` : '';
-  const tag = (sym.circuit && c) ? `<text class="t-tag" x="${x}" y="${y + 22}" fill="${col}">${t('circuit.short', { n: circuitIndex(it.c) + 1 })}</text>` : '';
-  return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="17" fill="transparent"/>${ring}${sym.draw(x, y, col)}${tag}</g>`;
+  const tag = (sym.circuit && c) ? `<text class="t-tag" x="${x}" y="${y + 22}">${t('circuit.short', { n: circuitIndex(it.c) + 1 })}</text>` : '';
+  return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="20" fill="transparent"/>${ring}${sym.draw(x, y, col)}${tag}</g>`;
 }
 
 export function renderCanvas() {
@@ -54,7 +54,7 @@ export function renderCanvas() {
         fill="var(--room)" stroke="${isSel ? 'var(--sel)' : 'var(--wall)'}" stroke-width="${isSel ? 3.5 : 3}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}"/>
       <text class="t-name" x="${r.x + r.w / 2}" y="${r.y + r.h / 2 - 2}">${esc(r.name)}</text>
       <text class="t-size" x="${r.x + r.w / 2}" y="${r.y + r.h / 2 + 12}">${fmtNum(r.w / U)} × ${fmtNum(r.h / U)} m</text>
-      ${isSel && session.tool === 'select' ? `<circle data-k="handle" data-id="${r.id}" cx="${r.x + r.w}" cy="${r.y + r.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2" style="cursor:nwse-resize"/>` : ''}
+      ${isSel && session.tool === 'select' ? `<g data-k="handle" data-id="${r.id}" style="cursor:nwse-resize"><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="22" fill="transparent"/><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2"/></g>` : ''}
     </g>`;
   }
   for (const it of plan.items) if (SYMBOLS[it.type]) h += symbolMarkup(it);

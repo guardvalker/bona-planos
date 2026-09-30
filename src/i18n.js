@@ -49,6 +49,15 @@ const STR = {
     'count.tablero.other': '{n} tableros',
     'count.boca.one': '{n} boca',
     'count.boca.other': '{n} bocas',
+
+    'about.open': 'Novedades',
+    'about.title': 'Novedades',
+    'about.version': 'Versión {v}',
+    'about.update': 'Buscar actualización',
+    'cl.1_0_0.a': 'Primera versión: ambientes, tomas, luces, llaves y tablero por circuito.',
+    'cl.1_0_0.b': 'Varios planos guardados en el dispositivo, con deshacer y rehacer.',
+    'cl.1_0_0.c': 'Exportar a PNG, SVG, PDF/impresión y JSON, con leyenda de circuitos.',
+    'cl.1_0_0.d': 'Se instala y funciona sin conexión.',
     'ask.ok': 'Aceptar',
     'ask.cancel': 'Cancelar',
 
@@ -165,6 +174,15 @@ const STR = {
     'count.tablero.other': '{n} panels',
     'count.boca.one': '{n} point',
     'count.boca.other': '{n} points',
+
+    'about.open': 'What’s new',
+    'about.title': 'What’s new',
+    'about.version': 'Version {v}',
+    'about.update': 'Check for updates',
+    'cl.1_0_0.a': 'First release: rooms, outlets, lights, switches and panel by circuit.',
+    'cl.1_0_0.b': 'Several plans saved on the device, with undo and redo.',
+    'cl.1_0_0.c': 'Export to PNG, SVG, PDF/print and JSON, with a circuit legend.',
+    'cl.1_0_0.d': 'Installable and works offline.',
     'ask.ok': 'OK',
     'ask.cancel': 'Cancel',
 

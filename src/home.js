@@ -1,5 +1,6 @@
 // Pantalla de inicio: lista de planos (crear, abrir, renombrar, duplicar, borrar).
 import { newPlan, uid } from './state.js';
+import { APP_VERSION, CHANGELOG } from './version.js';
 import { t, tn, lang } from './i18n.js';
 import { esc } from './canvas.js';
 import { readPlanFile } from './export.js';
@@ -74,6 +75,23 @@ export async function renderHome() {
 
 // `open(id)` navega al editor.
 export function initHome({ open }) {
+  $('#hVer').textContent = t('about.version', { v: APP_VERSION });
+  $('#hAbout').addEventListener('click', () => {
+    $('#abBody').innerHTML = CHANGELOG.map(c =>
+      `<h3>${esc(c.v)} · ${esc(c.date)}</h3><ul>${c.items.map(k => `<li>${esc(t(k))}</li>`).join('')}</ul>`).join('');
+    $('#about').classList.add('show');
+    $('#abClose').focus();
+  });
+  $('#abClose').addEventListener('click', () => $('#about').classList.remove('show'));
+  $('#about').addEventListener('keydown', e => { if (e.key === 'Escape') $('#about').classList.remove('show'); });
+  // Actualización manual: borra caches y service workers y recarga (no depende de que sw.js haya cambiado).
+  $('#abUpdate').addEventListener('click', async () => {
+    try {
+      for (const k of await caches.keys()) await caches.delete(k);
+      for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+    } catch (e) { /* sin SW: solo recarga */ }
+    location.reload();
+  });
   $('#hNew').addEventListener('click', async () => open(await createPlan(await listPlans())));
   // Importar desde archivo: siempre entra como plano nuevo (no pisa uno existente con el mismo id).
   $('#hImport').addEventListener('click', () => $('#fileHome').click());

@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#18222c">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18222c" media="(prefers-color-scheme: dark)">
 <title>Plano eléctrico rápido</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -21,13 +22,15 @@
   </div>
   <p id="hWarn" class="warn" hidden data-i18n="home.notPersistent"></p>
   <div id="hList" data-i18n-aria="home.list"></div>
+  <div class="foot"><span id="hVer"></span><button id="hAbout" data-i18n="about.open"></button></div>
 </main>
 
-<div id="editor">
-<header id="head">
+<div id="editor" role="main">
+<div id="head">
+  <h1 class="sr" data-i18n="app.title"></h1>
   <button id="bBack" data-i18n-aria="nav.backAria">‹ <span data-i18n="nav.back"></span></button>
   <input id="pname" type="text" maxlength="80" data-i18n-aria="plan.name">
-</header>
+</div>
 <div id="bar" role="toolbar"></div>
 <div id="hint" aria-live="polite"></div>
 
@@ -72,7 +75,7 @@
   <div class="box">
     <strong id="mTitle" data-i18n="data.title"></strong>
     <div class="help" data-i18n="data.help"></div>
-    <textarea id="json" spellcheck="false"></textarea>
+    <textarea id="json" spellcheck="false" data-i18n-aria="data.title"></textarea>
     <div id="msg" aria-live="polite"></div>
     <div class="row">
       <button id="mCopy" data-i18n="data.copy"></button>
@@ -100,6 +103,17 @@
 <input type="file" id="fileEditor" accept=".json,application/json" hidden>
 <input type="file" id="fileHome" accept=".json,application/json" hidden>
 <div id="printArea" aria-hidden="true"></div>
+
+<div id="about" class="overlay" role="dialog" aria-modal="true" aria-labelledby="abTitle">
+  <div class="box">
+    <strong id="abTitle" data-i18n="about.title"></strong>
+    <div id="abBody"></div>
+    <div class="row">
+      <button id="abUpdate" data-i18n="about.update"></button>
+      <button id="abClose" data-i18n="data.close"></button>
+    </div>
+  </div>
+</div>
 
 <div id="ask" class="overlay" role="dialog" aria-modal="true" aria-labelledby="aTitle">
   <form class="box">

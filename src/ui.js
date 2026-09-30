@@ -198,7 +198,7 @@ export function initUI({ goHome }) {
     if (loadInto(await readPlanFile(f))) closeModal(); else $('#msg').textContent = t('data.error');
   });
 
-  $('#bExport').addEventListener('click', () => $('#exp').classList.add('show'));
+  $('#bExport').addEventListener('click', () => { $('#exp').classList.add('show'); $('#ePng').focus(); });
   $('#eClose').addEventListener('click', closeExport);
   $('#ePng').addEventListener('click', exportPng);
   $('#eSvg').addEventListener('click', exportSvg);

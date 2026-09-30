@@ -49,7 +49,7 @@ export function buildSvg(plan = getPlan()) {
     const col = c ? c.color : C.none;
     g += sym.draw(it.x, it.y, col).replaceAll('var(--room)', C.room);
     if (sym.circuit && c) {
-      g += `<text x="${it.x}" y="${it.y + 22}" font-size="10" font-weight="700" fill="${col}" text-anchor="middle">${t('circuit.short', { n: plan.circuits.indexOf(c) + 1 })}</text>`;
+      g += `<text x="${it.x}" y="${it.y + 22}" font-size="10" font-weight="700" fill="${C.ink}" text-anchor="middle">${t('circuit.short', { n: plan.circuits.indexOf(c) + 1 })}</text>`;
     }
   }
   g += '</g>';
