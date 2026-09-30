@@ -2,6 +2,7 @@
 import { newPlan, uid } from './state.js';
 import { t, tn, lang } from './i18n.js';
 import { esc } from './canvas.js';
+import { readPlanFile } from './export.js';
 import { listPlans, loadPlan, savePlan, removePlan, persistent } from './storage.js';
 
 const $ = s => document.querySelector(s);
@@ -71,9 +72,22 @@ export async function renderHome() {
     </article>`).join('');
 }
 
-// `open(id)` navega al editor; `created` lo llama main.js tras crear un plano.
+// `open(id)` navega al editor.
 export function initHome({ open }) {
   $('#hNew').addEventListener('click', async () => open(await createPlan(await listPlans())));
+  // Importar desde archivo: siempre entra como plano nuevo (no pisa uno existente con el mismo id).
+  $('#hImport').addEventListener('click', () => $('#fileHome').click());
+  $('#fileHome').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const p = await readPlanFile(f);
+    if (!p) { alert(t('import.error')); return; }
+    p.id = crypto.randomUUID ? crypto.randomUUID() : uid() + uid();
+    if (!p.name) p.name = f.name.replace(/\.json$/i, '') || t('plan.unnamed');
+    await savePlan(p);
+    open(p.id);
+  });
   $('#hList').addEventListener('click', async e => {
     const b = e.target.closest('[data-act]');
     if (!b) return;

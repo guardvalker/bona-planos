@@ -117,3 +117,23 @@ button.primary{background:var(--accent);color:#fff;border-color:var(--accent);fo
 .overlay .box{background:var(--panel);border-radius:12px;padding:14px;width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line)}
 .overlay input{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px}
 .overlay .row{display:flex;gap:6px;flex-wrap:wrap}
+
+.home-actions{display:flex;gap:6px}
+#exp .help{font-size:13px;color:var(--mute)}
+#legendBody{padding:2px 0 6px}
+.lrow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px;flex-wrap:wrap}
+.lrow i{width:12px;height:12px;border-radius:50%;flex:none}
+.lrow .ln{font-weight:600}
+.lrow .lc{color:var(--mute);flex:1 1 120px}
+.lrow b{margin-left:auto}
+.lrow.tot{border-top:1px solid var(--line);margin-top:4px;padding-top:8px}
+
+/* ---------- impresión: solo el plano con su leyenda ---------- */
+#printArea{display:none}
+@media print{
+  @page{margin:12mm}
+  html,body{height:auto;overflow:visible;background:#fff;display:block;padding:0}
+  body > *:not(#printArea){display:none !important}
+  #printArea{display:block}
+  #printArea svg{display:block;width:100%;height:auto;max-height:265mm}
+}

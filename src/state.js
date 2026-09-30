@@ -5,8 +5,8 @@
 //     rooms:[{id,x,y,w,h,name}], items:[{id,type,x,y,c}],
 //     circuits:[{id,name,color}], active }
 // Unidades del mundo: 1 m = 40 u; snap 10 para ambientes y 5 para elementos.
-import { t } from './i18n.js';
-import { SYMBOLS } from './symbols.js';
+import { t, tn } from './i18n.js';
+import { SYMBOLS, SYMBOL_TYPES } from './symbols.js';
 
 export const U = 40;
 export const SNAP = 10;
@@ -136,3 +136,27 @@ export function setTool(tool) {
   if (tool !== 'select') session.sel = null;
   notify('ui');
 }
+
+/* ---------- resumen (leyenda) ----------
+   Por circuito: cantidad de bocas por tipo de símbolo que se asigna a circuitos.
+   Los símbolos sin circuito (tablero) van aparte en `other`. */
+export function summarize(p = plan) {
+  const types = SYMBOL_TYPES.filter(k => SYMBOLS[k].circuit);
+  const blank = () => ({ counts: Object.fromEntries(types.map(k => [k, 0])), total: 0 });
+  const rows = p.circuits.map((c, i) => ({ id: c.id, n: i + 1, name: c.name, color: c.color, ...blank() }));
+  const orphan = blank();
+  const other = {};
+  for (const it of p.items) {
+    const sym = SYMBOLS[it.type];
+    if (!sym) continue;
+    if (!sym.circuit) { other[it.type] = (other[it.type] || 0) + 1; continue; }
+    const row = rows.find(r => r.id === it.c) || orphan;
+    row.counts[it.type]++; row.total++;
+  }
+  const total = rows.reduce((a, r) => a + r.total, orphan.total);
+  return { rows, orphan: orphan.total ? orphan : null, other, total };
+}
+
+// "3 luces · 2 llaves" (solo los tipos con cantidad)
+export const countsText = counts =>
+  Object.entries(counts).filter(([, n]) => n).map(([k, n]) => tn(`count.${k}`, n)).join(' · ') || '—';

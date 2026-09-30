@@ -1,10 +1,11 @@
 // Barra de herramientas, chips de circuitos, panel de selección y diálogo de datos.
 import {
-  getPlan, session, circuitOf, circuitIndex, checkpoint, notify, normalize,
+  getPlan, session, circuitOf, circuitIndex, checkpoint, notify, summarize, countsText, normalize,
   replacePlan, undo, redo, canUndo, canRedo
 } from './state.js';
+import { exportPng, exportSvg, printPlan, exportJson, readPlanFile } from './export.js';
 import { SYMBOLS, SYMBOL_TYPES } from './symbols.js';
-import { t } from './i18n.js';
+import { t, tn } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
   setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit
@@ -21,7 +22,7 @@ function buildBar() {
     btn('select', t('tool.select')) + btn('room', t('tool.room')) + '<span class="sep"></span>' +
     SYMBOL_TYPES.map(k => btn(k, t(`sym.${k}.btn`))).join('') + '<span class="sep"></span>' +
     `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
-    `<button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
+    `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));
 }
 
@@ -108,10 +109,23 @@ function renderCircuitEditor() {
   });
 }
 
+/* ---------- leyenda y resumen ---------- */
+function renderLegend() {
+  const sum = summarize();
+  const row = (color, label, detail, total) =>
+    `<div class="lrow"><i style="background:${color}"></i><span class="ln">${esc(label)}</span><span class="lc">${esc(detail)}</span><b>${tn('count.boca', total)}</b></div>`;
+  let h = sum.rows.map(r => row(r.color, `${cShort(r.id)} ${r.name}`, countsText(r.counts), r.total)).join('');
+  if (sum.orphan) h += row('#8b9aa8', t('circuit.none'), countsText(sum.orphan.counts), sum.orphan.total);
+  const other = Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)).join(' · ');
+  if (other) h += `<div class="lrow"><span class="lc">${esc(other)}</span></div>`;
+  h += `<div class="lrow tot"><span class="ln">${t('legend.total')}</span><b>${tn('count.boca', sum.total)}</b></div>`;
+  $('#legendBody').innerHTML = h;
+}
+
 /* ---------- render global ---------- */
 export function render(kind) {
   if (kind === 'canvas') { renderCanvas(); return; }
-  renderCanvas(); renderChips(); renderHint();
+  renderCanvas(); renderChips(); renderHint(); renderLegend();
   if (kind === 'soft') return;
   renderBar(); renderSel(); renderCircuitEditor();
   const pn = $('#pname');
@@ -126,6 +140,7 @@ function openModal() {
   $('#json').focus();
 }
 const closeModal = () => $('#modal').classList.remove('show');
+const closeExport = () => $('#exp').classList.remove('show');
 
 export function initUI({ goHome }) {
   buildBar();
@@ -159,13 +174,35 @@ export function initUI({ goHome }) {
     try { await navigator.clipboard.writeText(ta.value); $('#msg').textContent = t('data.copied'); }
     catch (e) { ta.select(); $('#msg').textContent = t('data.selected'); }
   });
+  // Cargar sobre el plano abierto: conserva su id (y su nombre si el JSON no trae uno),
+  // así el autoguardado actualiza este plano en vez de crear otro.
+  const loadInto = p => {
+    if (!p) return false;
+    const cur = getPlan();
+    p.id = cur.id;
+    if (!p.name) p.name = cur.name;
+    replacePlan(p);
+    return true;
+  };
   $('#mLoad').addEventListener('click', () => {
     let p = null;
     try { p = normalize(JSON.parse($('#json').value)); } catch (e) { /* JSON inválido */ }
-    if (!p) { $('#msg').textContent = t('data.error'); return; }
-    replacePlan(p);
-    closeModal();
+    if (loadInto(p)) closeModal(); else $('#msg').textContent = t('data.error');
   });
+  $('#mDown').addEventListener('click', exportJson);
+  $('#mFile').addEventListener('click', () => $('#fileEditor').click());
+  $('#fileEditor').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if (loadInto(await readPlanFile(f))) closeModal(); else $('#msg').textContent = t('data.error');
+  });
+
+  $('#bExport').addEventListener('click', () => $('#exp').classList.add('show'));
+  $('#eClose').addEventListener('click', closeExport);
+  $('#ePng').addEventListener('click', exportPng);
+  $('#eSvg').addEventListener('click', exportSvg);
+  $('#ePrint').addEventListener('click', () => { closeExport(); printPlan(); });
 
   document.addEventListener('keydown', e => {
     const tag = (document.activeElement && document.activeElement.tagName) || '';
@@ -175,7 +212,9 @@ export function initUI({ goHome }) {
     else if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
     else if (mod && k === 'y') { e.preventDefault(); redo(); }
     else if (e.key === 'Escape') {
-      if ($('#modal').classList.contains('show')) closeModal(); else setTool('select');
+      if ($('#modal').classList.contains('show')) closeModal();
+      else if ($('#exp').classList.contains('show')) closeExport();
+      else setTool('select');
     }
   });
 }

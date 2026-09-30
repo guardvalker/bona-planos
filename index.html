@@ -17,7 +17,7 @@
 <main id="home">
   <div class="home-top">
     <h1 data-i18n="home.title"></h1>
-    <button id="hNew" class="primary" data-i18n="home.new"></button>
+    <span class="home-actions"><button id="hImport" data-i18n="home.import"></button><button id="hNew" class="primary" data-i18n="home.new"></button></span>
   </div>
   <p id="hWarn" class="warn" hidden data-i18n="home.notPersistent"></p>
   <div id="hList" data-i18n-aria="home.list"></div>
@@ -56,6 +56,10 @@
 <div id="dock">
   <div id="chips" data-i18n-aria="circuit.list"></div>
   <div id="selrow"></div>
+  <details id="legend">
+    <summary data-i18n="legend.title"></summary>
+    <div id="legendBody"></div>
+  </details>
   <details id="cedit">
     <summary data-i18n="circuit.edit"></summary>
     <div id="clist"></div>
@@ -72,11 +76,30 @@
     <div id="msg" aria-live="polite"></div>
     <div class="row">
       <button id="mCopy" data-i18n="data.copy"></button>
+      <button id="mDown" data-i18n="data.download"></button>
+      <button id="mFile" data-i18n="data.file"></button>
       <button id="mLoad" data-i18n="data.load"></button>
       <button id="mClose" data-i18n="data.close"></button>
     </div>
   </div>
 </div>
+
+<div id="exp" class="overlay" role="dialog" aria-modal="true" aria-labelledby="eTitle">
+  <div class="box">
+    <strong id="eTitle" data-i18n="exp.title"></strong>
+    <div class="help" data-i18n="exp.help"></div>
+    <div class="row">
+      <button id="ePng" data-i18n="exp.png"></button>
+      <button id="eSvg" data-i18n="exp.svg"></button>
+      <button id="ePrint" data-i18n="exp.print"></button>
+    </div>
+    <div class="row"><button id="eClose" data-i18n="data.close"></button></div>
+  </div>
+</div>
+
+<input type="file" id="fileEditor" accept=".json,application/json" hidden>
+<input type="file" id="fileHome" accept=".json,application/json" hidden>
+<div id="printArea" aria-hidden="true"></div>
 
 <div id="ask" class="overlay" role="dialog" aria-modal="true" aria-labelledby="aTitle">
   <form class="box">
