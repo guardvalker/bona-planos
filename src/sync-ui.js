@@ -75,7 +75,7 @@ export function initSyncUI(sync) {
       if (!email) return;
       run(async () => { await sync.sendOtp(email); step = 'code'; });
     } else if (id === 'acVerify') {
-      const code = $('#acCode').value.trim();
+      const code = $('#acCode').value.replace(/\s+/g, '');
       if (!code) return;
       run(async () => { await sync.verifyOtp(email, code); step = 'email'; });
     } else if (id === 'acBack') { step = 'email'; msg = ''; renderDialog(); $('#acEmail').focus(); }
