@@ -145,7 +145,7 @@ button.primary{background:var(--accent);color:var(--btn-on-ink);border-color:var
   #printArea svg{display:block;width:100%;height:auto;max-height:265mm}
 }
 
-.foot{display:flex;align-items:center;gap:8px;justify-content:center;color:var(--mute);font-size:13px;padding:16px 0 8px}
+.foot{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;color:var(--mute);font-size:13px;padding:16px 0 8px}
 .foot button{background:none;border:0;text-decoration:underline;color:var(--mute);min-height:40px}
 #about .box{max-height:80vh;overflow-y:auto}
 #about h3{margin:8px 0 2px;font-size:14px}
@@ -168,7 +168,7 @@ button.primary{background:var(--accent);color:var(--btn-on-ink);border-color:var
 .lrow .ltech{flex-basis:100%;color:var(--mute);font-size:12px;padding-left:20px}
 
 /* ---------- sync opcional ---------- */
-#hCloud{background:none;border:0;color:var(--mute);text-decoration:underline}
+#hCloud{background:none;border:0;color:var(--mute);text-decoration:underline;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #syncNotes .note{background:var(--panel);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;font-size:13px;margin:6px 0}
 .notes-ok{margin-bottom:6px}
 #acct .help{font-size:13px;color:var(--mute);margin:0}

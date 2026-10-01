@@ -31,7 +31,7 @@ export function initSyncUI(sync) {
     return s.lastSync ? t('sync.synced', { time: fmtTime(s.lastSync) }) : t('sync.signedIn');
   }
   function renderHome() {
-    $('#hCloud').textContent = snap.user ? `☁ ${statusText(snap)}` : t('sync.open');
+    $('#hCloud').textContent = snap.user ? `☁ ${snap.user.email ? snap.user.email + ' · ' : ''}${statusText(snap)}` : t('sync.open');
     $('#syncNotes').innerHTML = snap.notes.map(n =>
       `<p class="note">${esc(t(n.key, { name: n.params.name || t('plan.unnamed') }))}</p>`).join('') +
       (snap.notes.length ? `<button id="notesOk" class="notes-ok">${t('sync.dismiss')}</button>` : '');
