@@ -50,7 +50,8 @@ export async function initSync(cfg, hooks = {}) {
   async function ensureClient() {
     if (sb) return sb;
     const lib = await loadLib();
-    sb = lib.createClient(cfg.url, cfg.anonKey);
+    // storageKey propio: sin esto todas las apps del mismo origen compartían una sola sesión.
+    sb = lib.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: 'bona-planos-auth', persistSession: true, autoRefreshToken: true } });
     sb.auth.onAuthStateChange((_ev, session) => {
       const next = session ? session.user : null;
       if (next && (!user || user.id !== next.id)) { user = next; emit(); request(0); }
