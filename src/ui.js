@@ -47,29 +47,20 @@ function renderBar() {
 }
 
 /* ---------- pista, chips ---------- */
-function renderHint() {
-  const plan = getPlan(), tool = session.tool;
-  let s;
-  if (tool === 'select') s = t('hint.select');
-  else if (tool === 'room') s = t('hint.room');
-  else if (tool === 'zone') s = t('hint.zone');
-  else if (tool === 'label') s = t('hint.label');
-  else if (tool === 'cable') s = t('hint.cable', { circuit: circuitOf(plan.active) ? `${cShort(plan.active)} ${circuitOf(plan.active).name}` : t('circuit.none') });
-  else {
-    const c = circuitOf(plan.active);
-    s = t('hint.place', { put: t(`sym.${tool}.put`) });
-    s += SYMBOLS[tool].circuit ? t('hint.inCircuit', { circuit: c ? `${cShort(c.id)} ${c.name}` : t('circuit.none') }) : '.';
-  }
-  $('#hint').textContent = s;
-}
+let circOpen = false;   // desplegable de circuitos
 
 function renderChips() {
   const plan = getPlan();
-  $('#chips').innerHTML = plan.circuits.map(c => {
-    const n = plan.items.filter(it => it.c === c.id).length;
-    return `<button class="chip ${plan.active === c.id ? 'on' : ''}" data-c="${c.id}" aria-pressed="${plan.active === c.id}">
-      <i style="background:${c.color}"></i>${cLabel(c)} <small>${n}</small></button>`;
-  }).join('');
+  const act = circuitOf(plan.active);
+  const count = id => plan.items.filter(it => it.c === id).length;
+  $('#circBtn').innerHTML = act
+    ? `<i style="background:${act.color}"></i><span class="grow">${cLabel(act)}</span><small>${count(act.id)}</small><span class="chev">▾</span>`
+    : `<span class="grow">${t('circuit.none')}</span><span class="chev">▾</span>`;
+  $('#circBtn').setAttribute('aria-expanded', circOpen);
+  $('#circMenu').hidden = !circOpen;
+  $('#circMenu').innerHTML = plan.circuits.map(c =>
+    `<button class="copt ${plan.active === c.id ? 'on' : ''}" role="option" aria-selected="${plan.active === c.id}" data-c="${c.id}">
+      <i style="background:${c.color}"></i>${cLabel(c)} <small>${count(c.id)}</small></button>`).join('');
 }
 
 /* ---------- selección ---------- */
@@ -94,7 +85,7 @@ function renderSel() {
     $('#bCancel').addEventListener('click', cancelCable);
     return;
   }
-  if (!sel) { el.innerHTML = `<span class="lbl">${t('sel.none')}</span>`; return; }
+  if (!sel) { el.innerHTML = ''; return; }
   const del = `<button id="bDel" class="danger">${t('sel.delete')}</button>`;
   const rot = `<button id="bRot">${t('sel.rotate')}</button>`;
   if (sel.kind === 'room') {
@@ -181,10 +172,26 @@ function renderLegend() {
   $('#legendBody').innerHTML = h;
 }
 
+// Resumen en texto plano para pegar en un mensaje.
+function summaryText() {
+  const plan = getPlan(), sum = summarize(plan);
+  const lines = [plan.name || t('plan.unnamed')];
+  const rows = sum.rows.map((r, i) => ({ r, tech: techText(plan.circuits[i]) })).concat(sum.orphan ? [{ r: { ...sum.orphan, n: 0, name: t('legend.unassigned') }, tech: '' }] : []);
+  for (const { r, tech } of rows) {
+    if (!r.total && !r.cableM) continue;
+    lines.push('', `${r.n ? cShort(plan.circuits[r.n - 1].id) + ' ' : ''}${r.name}: ${describeRow(r)}`);
+    if (tech) lines.push(`  ${tech}`);
+  }
+  const other = [...Object.entries(sum.other).map(([k, n]) => tn(`count.${k}`, n)), ...(sum.cableTotal > 0 ? [t('legend.cableTotal', { m: fmtNum(sum.cableTotal) })] : [])].join(' · ');
+  if (other) lines.push('', other);
+  lines.push('', `${t('legend.total')}: ${tn('count.boca', sum.total)}`);
+  return lines.join('\n');
+}
+
 /* ---------- render global ---------- */
 export function render(kind) {
   if (kind === 'canvas') { renderCanvas(); return; }
-  renderCanvas(); renderChips(); renderHint(); renderLegend();
+  renderCanvas(); renderChips(); renderLegend();
   if (kind === 'soft') return;
   renderBar(); renderSel(); renderCircuitEditor();
   const pn = $('#pname');
@@ -223,12 +230,20 @@ export function initUI({ goHome }) {
   $('#bRedo').addEventListener('click', redo);
   $('#bClear').addEventListener('click', clearPlan);
   $('#bData').addEventListener('click', openModal);
+  $('#lCopy').addEventListener('click', async () => {
+    const text = summaryText(), ta = $('#lText');
+    try { await navigator.clipboard.writeText(text); ta.hidden = true; $('#lMsg').textContent = t('legend.copied'); }
+    catch (e) { ta.value = text; ta.hidden = false; ta.focus(); ta.select(); $('#lMsg').textContent = t('legend.select'); }
+  });
   $('#zIn').addEventListener('click', () => zoomBy(1.25));
   $('#zOut').addEventListener('click', () => zoomBy(1 / 1.25));
 
-  $('#chips').addEventListener('click', e => {
+  $('#circBtn').addEventListener('click', () => { circOpen = !circOpen; renderChips(); });
+  $('#circMenu').addEventListener('click', e => {
     const b = e.target.closest('[data-c]');
-    if (b) pickCircuit(b.dataset.c);
+    if (!b) return;
+    circOpen = false;
+    pickCircuit(b.dataset.c);
   });
   $('#clist').addEventListener('click', e => {
     const b = e.target.closest('[data-del]');
@@ -283,6 +298,7 @@ export function initUI({ goHome }) {
     else if (e.key === 'Escape') {
       if ($('#modal').classList.contains('show')) closeModal();
       else if ($('#exp').classList.contains('show')) closeExport();
+      else if (circOpen) { circOpen = false; renderChips(); }
       else if (panelOpen) { panelOpen = false; renderBar(); }
       else setTool('select');
     }

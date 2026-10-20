@@ -45,7 +45,6 @@
 </div>
 <div id="bar" role="toolbar"></div>
 <div id="sub" hidden></div>
-<div id="hint" aria-live="polite"></div>
 
 <div id="stage">
   <svg id="cv" xmlns="http://www.w3.org/2000/svg">
@@ -70,16 +69,24 @@
 </div>
 
 <div id="dock">
-  <div id="chips" data-i18n-aria="circuit.list"></div>
+  <div id="circ">
+    <button id="circBtn" aria-haspopup="listbox" aria-expanded="false"></button>
+    <div id="circMenu" role="listbox" data-i18n-aria="circuit.list" hidden></div>
+  </div>
   <div id="selrow"></div>
-  <details id="legend">
-    <summary data-i18n="legend.title"></summary>
-    <div id="legendBody"></div>
-  </details>
   <details id="cedit">
     <summary data-i18n="circuit.edit"></summary>
     <div id="clist"></div>
     <button id="cAdd" data-i18n="circuit.add"></button>
+  </details>
+  <details id="legend">
+    <summary data-i18n="legend.title"></summary>
+    <div id="legendBody"></div>
+    <div class="row lcopy">
+      <button id="lCopy" data-i18n="legend.copy"></button>
+      <span id="lMsg" class="help" aria-live="polite"></span>
+    </div>
+    <textarea id="lText" readonly hidden spellcheck="false" data-i18n-aria="legend.copy"></textarea>
   </details>
 </div>
 </div>
