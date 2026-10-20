@@ -20,10 +20,10 @@ export function buildSvg(plan = getPlan()) {
   plan.rooms.forEach(r => r.pts.forEach(q => ext(q[0] - 2, q[1] - 2, q[0] + 2, q[1] + 2)));
   plan.walls.forEach(w => w.pts.forEach(q => ext(q[0] - 3, q[1] - 3, q[0] + 3, q[1] + 3)));
   plan.zones.forEach(z => ext(z.x - 3, z.y - 20, z.x + z.w + 3, z.y + z.h + 3));
-  plan.items.forEach(i => ext(i.x - 16, i.y - 16, i.x + 16, i.y + 28));
+  plan.items.forEach(i => { const k = i.s || 1; ext(i.x - 16 * k, i.y - 16 * k, i.x + 16 * k, i.y + 28 * k); });
   plan.cables.forEach(cb => cb.pts.forEach(q => ext(q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4)));
   plan.labels.forEach(l => {
-    const along = l.text.length * 3.8 + 6, across = 10;      // semilargo y semialto aproximados del texto
+    const k = l.s || 1, along = l.text.length * 3.8 * k + 6, across = 10 * k;      // semilargo y semialto aproximados del texto
     const v = l.rot === 90 || l.rot === 270;
     ext(l.x - (v ? across : along), l.y - (v ? along : across), l.x + (v ? across : along), l.y + (v ? along : across));
   });
@@ -72,11 +72,13 @@ export function buildSvg(plan = getPlan()) {
     const col = c ? c.color : C.none;
     g += drawSymbol(it, col).replaceAll('var(--room)', C.room).replaceAll('var(--wall)', C.wall);
     if (sym.circuit && c) {
-      g += `<text x="${it.x}" y="${it.y + 22}" font-size="10" font-weight="700" fill="${C.ink}" text-anchor="middle">${t('circuit.short', { n: plan.circuits.indexOf(c) + 1 })}</text>`;
+      const k = it.s || 1;
+      g += `<text x="${it.x}" y="${it.y + 22 * k}" font-size="${Math.max(7, 10 * k)}" font-weight="700" fill="${C.ink}" text-anchor="middle">${t('circuit.short', { n: plan.circuits.indexOf(c) + 1 })}</text>`;
     }
   }
   for (const l of plan.labels) {
-    g += `<text x="${l.x}" y="${l.y + 4.5}" font-size="13" font-weight="600" fill="${C.ink}" text-anchor="middle"${l.rot ? ` transform="rotate(${l.rot} ${l.x} ${l.y})"` : ''}>${esc(l.text)}</text>`;
+    const k = l.s || 1;
+    g += `<text x="${l.x}" y="${l.y + 4.5 * k}" font-size="${13 * k}" font-weight="600" fill="${C.ink}" text-anchor="middle"${l.rot ? ` transform="rotate(${l.rot} ${l.x} ${l.y})"` : ''}>${esc(l.text)}</text>`;
   }
   g += '</g>';
 

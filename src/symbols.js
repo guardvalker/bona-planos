@@ -83,10 +83,12 @@ export const SYMBOL_TYPES = Object.keys(SYMBOLS);
 export const BAR_TYPES = SYMBOL_TYPES.filter(k => !SYMBOLS[k].hidden && !SYMBOLS[k].group);
 export const GROUPS = { tablero: SYMBOL_TYPES.filter(k => SYMBOLS[k].group === 'tablero') };
 
-// Símbolo con su rotación (múltiplos de 90°). La etiqueta y el aro de selección no rotan.
+// Símbolo con su rotación (múltiplos de 90°) y escala `s`. La etiqueta y el aro de selección no rotan.
 export function drawSymbol(it, col) {
-  const m = SYMBOLS[it.type].draw(it.x, it.y, col);
-  return it.rot ? `<g transform="rotate(${it.rot} ${it.x} ${it.y})">${m}</g>` : m;
+  const m = SYMBOLS[it.type].draw(it.x, it.y, col), s = it.s || 1;
+  if (!it.rot && s === 1) return m;
+  const tf = (it.rot ? `rotate(${it.rot} ${it.x} ${it.y}) ` : '') + (s !== 1 ? `translate(${it.x} ${it.y}) scale(${s}) translate(${-it.x} ${-it.y})` : '');
+  return `<g transform="${tf.trim()}">${m}</g>`;
 }
 
 // Ícono para la barra: el mismo dibujo del registro, centrado en 0,0.

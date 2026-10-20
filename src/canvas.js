@@ -37,11 +37,11 @@ function symbolMarkup(it) {
   const sym = SYMBOLS[it.type];
   const c = circuitOf(it.c);
   const col = c ? c.color : '#5d6b78';
-  const { x, y } = it;
+  const { x, y } = it, k = it.s || 1;
   const isSel = session.sel && session.sel.kind === 'item' && session.sel.id === it.id;
-  const ring = isSel ? `<circle cx="${x}" cy="${y}" r="17" fill="none" stroke="var(--sel)" stroke-width="2" stroke-dasharray="4 3"/>` : '';
-  const tag = (sym.circuit && c) ? `<text class="t-tag" x="${x}" y="${y + 22}">${t('circuit.short', { n: circuitIndex(it.c) + 1 })}</text>` : '';
-  return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="20" fill="transparent"/>${ring}${drawSymbol(it, col)}${tag}</g>`;
+  const ring = isSel ? `<circle cx="${x}" cy="${y}" r="${17 * k}" fill="none" stroke="var(--sel)" stroke-width="2" stroke-dasharray="4 3"/>` : '';
+  const tag = (sym.circuit && c) ? `<text class="t-tag" x="${x}" y="${y + 22 * k}" style="font-size:${Math.max(7, 10 * k)}px">${t('circuit.short', { n: circuitIndex(it.c) + 1 })}</text>` : '';
+  return `<g data-k="item" data-id="${it.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="${Math.max(12, 20 * k)}" fill="transparent"/>${ring}${drawSymbol(it, col)}${tag}</g>`;
 }
 
 const pointsAttr = pts => pts.map(q => q.join(',')).join(' ');
@@ -75,11 +75,11 @@ function cableMarkup(cb) {
 }
 
 function labelMarkup(l) {
-  const w = Math.max(24, l.text.length * 7.4 + 10), h = 20;
+  const k = l.s || 1, w = Math.max(24, l.text.length * 7.4 * k + 10), h = 20 * k;
   const isSel = session.sel && session.sel.kind === 'label' && session.sel.id === l.id;
   const box = `<rect x="${l.x - w / 2}" y="${l.y - h / 2}" width="${w}" height="${h}" rx="4" fill="transparent"${isSel ? ' stroke="var(--sel)" stroke-width="1.5" stroke-dasharray="4 3"' : ''}/>`;
   return `<g data-k="label" data-id="${l.id}" style="cursor:pointer"${l.rot ? ` transform="rotate(${l.rot} ${l.x} ${l.y})"` : ''}>${box}` +
-    `<text class="t-label" x="${l.x}" y="${l.y + 4.5}">${esc(l.text)}</text></g>`;
+    `<text class="t-label" x="${l.x}" y="${l.y + 4.5 * k}" style="font-size:${13 * k}px">${esc(l.text)}</text></g>`;
 }
 
 // Zona: recuadro punteado de color. Solo el borde y el nombre reciben toques, así no tapa lo que hay debajo.

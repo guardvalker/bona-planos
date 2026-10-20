@@ -1,7 +1,7 @@
 // Herramientas: qué hace cada gesto sobre el plano y las acciones de edición.
 // Los gestos usan `checkpoint()` antes de mutar, una sola vez por gesto.
 import {
-  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, circuitOf, rectPts, bbox, inPoly,
+  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, circuitOf, safeScale, rectPts, bbox, inPoly,
   checkpoint, dropCheckpoint, notify, setTool, endDraft
 } from './state.js';
 import { askText } from './dialogs.js';
@@ -24,7 +24,7 @@ export const handlers = {
         if (!text) return;
         const id = uid();
         checkpoint();
-        getPlan().labels.push({ id, x, y, text, rot: 0 });
+        getPlan().labels.push({ id, x, y, text, rot: 0, s: getPlan().lscale || 1 });
         session.sel = { kind: 'label', id }; session.tool = 'select';
         notify('data');
       });
@@ -60,7 +60,7 @@ export const handlers = {
     }
     if (isPlaceTool(tool)) {
       checkpoint();
-      plan.items.push({ id: uid(), type: tool, x: snap(p.x, ISNAP), y: snap(p.y, ISNAP), c: SYMBOLS[tool].circuit ? plan.active : null, rot: 0 });
+      plan.items.push({ id: uid(), type: tool, x: snap(p.x, ISNAP), y: snap(p.y, ISNAP), c: SYMBOLS[tool].circuit ? plan.active : null, rot: 0, s: plan.iscale || 1 });
       notify('data');
       return { type: 'place' };
     }
@@ -352,6 +352,33 @@ export function rotateSelection() {
   if (!obj) return;
   checkpoint();
   obj.rot = ((obj.rot || 0) + 90) % 360;
+  notify('data');
+}
+
+// Agranda o achica (×1,25 / ÷1,25) el elemento o la etiqueta seleccionados.
+export function scaleSelection(dir) {
+  const sel = session.sel, plan = getPlan();
+  if (!sel || (sel.kind !== 'item' && sel.kind !== 'label')) return;
+  const obj = (sel.kind === 'item' ? plan.items : plan.labels).find(o => o.id === sel.id);
+  if (!obj) return;
+  const s = safeScale((obj.s || 1) * (dir > 0 ? 1.25 : 0.8));
+  if (s === (obj.s || 1)) return;
+  checkpoint();
+  obj.s = s;
+  notify('data');
+}
+
+// Deja todos los elementos (o etiquetas) con la escala del seleccionado, y las nuevas también.
+export function scaleAll() {
+  const sel = session.sel, plan = getPlan();
+  if (!sel || (sel.kind !== 'item' && sel.kind !== 'label')) return;
+  const list = sel.kind === 'item' ? plan.items : plan.labels;
+  const obj = list.find(o => o.id === sel.id);
+  if (!obj) return;
+  checkpoint();
+  const s = obj.s || 1;
+  list.forEach(o => { o.s = s; });
+  plan[sel.kind === 'item' ? 'iscale' : 'lscale'] = s;
   notify('data');
 }
 

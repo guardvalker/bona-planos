@@ -4,12 +4,12 @@
 //   { v, id, name, updatedAt, units:{perMeter,snap},
 //     rooms:[{id,pts:[[x,y],...],name}],    polígono (esquinas = nodos); los v1–v3 traían x,y,w,h y se convierten
 //     walls:[{id,pts:[[x,y],[x,y]]}],       paredes sueltas (medias paredes, tabiques) dentro de un ambiente
-//     items:[{id,type,x,y,c,rot}],          type: clave de SYMBOLS; rot: 0|90|180|270
+//     items:[{id,type,x,y,c,rot,s}],        s: escala (1 = normal)          type: clave de SYMBOLS; rot: 0|90|180|270
 //     zones:[{id,x,y,w,h,name,color}],      recuadros punteados de color (horno, mostrador, etc.), sin circuito
-//     labels:[{id,x,y,text,rot}],           texto libre sobre el plano
+//     labels:[{id,x,y,text,rot,s}],           texto libre sobre el plano
 //     cables:[{id,c,pts:[[x,y],...]}],      recorrido aproximado de los conductores (c: circuito)
 //     circuits:[{id,name,color,prot,cable,rcd,notes}],   datos técnicos opcionales (texto libre)
-//     active }
+//     active, iscale, lscale }          escala con la que nacen los elementos / etiquetas nuevos
 // v1/v2 (sin cables, labels, rot ni datos técnicos) y el formato del prototipo se siguen aceptando.
 // Unidades del mundo: 1 m = 40 u; snap 10 para ambientes y 5 para elementos.
 import { t, tn, fmtNum } from './i18n.js';
@@ -52,6 +52,9 @@ export const isRect = pts => pts.length === 4 && pts.every((q, i) => {
   return q[0] === n[0] || q[1] === n[1];
 });
 
+export const SCALE_MIN = .4, SCALE_MAX = 2.5;
+export const safeScale = v => (Number.isFinite(+v) && +v > 0 ? Math.round(clamp(+v, SCALE_MIN, SCALE_MAX) * 100) / 100 : 1);
+
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const snap = (v, n = SNAP) => Math.round(v / n) * n;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -68,7 +71,7 @@ export function newPlan(name = '') {
       { id: 'c3', name: t('circuit.kitchen'), color: PALETTE[2] },
       { id: 'c4', name: t('circuit.ac'), color: PALETTE[3] }
     ],
-    active: 'c2'
+    active: 'c2', iscale: 1, lscale: 1
   };
 }
 
@@ -116,12 +119,12 @@ export function normalize(d) {
     const type = it && it.type === 'ventilador' ? 'luz' : it && it.type;   // el ventilador se quitó: pasa a ser una boca de luz
     if (x === null || y === null || !SYMBOLS[type]) return null;
     const c = p.circuits.some(c => c.id === it.c) ? it.c : null;
-    return { id: safeId(it.id) || uid(), type, x, y, c, rot: safeRot(it.rot) };
+    return { id: safeId(it.id) || uid(), type, x, y, c, rot: safeRot(it.rot), s: safeScale(it.s) };
   }).filter(Boolean);
   p.labels = (Array.isArray(d.labels) ? d.labels : []).map(l => {
     const x = num(l && l.x), y = num(l && l.y), text = str(l && l.text, 120);
     if (x === null || y === null || !text) return null;
-    return { id: safeId(l.id) || uid(), x, y, text, rot: safeRot(l.rot) };
+    return { id: safeId(l.id) || uid(), x, y, text, rot: safeRot(l.rot), s: safeScale(l.s) };
   }).filter(Boolean);
   p.cables = (Array.isArray(d.cables) ? d.cables : []).map(cb => {
     const pts = (Array.isArray(cb && cb.pts) ? cb.pts : []).slice(0, 300)
@@ -129,6 +132,7 @@ export function normalize(d) {
     if (pts.length < 2) return null;
     return { id: safeId(cb.id) || uid(), c: p.circuits.some(c => c.id === cb.c) ? cb.c : null, pts };
   }).filter(Boolean);
+  p.iscale = safeScale(d.iscale); p.lscale = safeScale(d.lscale);
   p.active = p.circuits.some(c => c.id === d.active) ? d.active : p.circuits[0].id;
   return p;
 }

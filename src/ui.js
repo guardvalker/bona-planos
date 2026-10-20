@@ -9,7 +9,7 @@ import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
   setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection,
-  finishCable, cancelCable, deleteVertex, deleteRoomVertex, startMerge, cancelMerge, setZoneColor, assignSelection
+  finishCable, cancelCable, deleteVertex, deleteRoomVertex, startMerge, cancelMerge, scaleSelection, scaleAll, setZoneColor, assignSelection
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -96,6 +96,12 @@ function renderSel() {
   if (!sel) { el.innerHTML = ''; return; }
   const del = `<button id="bDel" class="danger">${t('sel.delete')}</button>`;
   const rot = `<button id="bRot">${t('sel.rotate')}</button>`;
+  const sizeBtns = o => {
+    const s = o.s || 1;
+    return `<span class="sizer"><button id="bSmall" aria-label="${t('sel.smaller')}" title="${t('sel.smaller')}">−</button>` +
+      `<span class="pct">${Math.round(s * 100)}%</span><button id="bBig" aria-label="${t('sel.bigger')}" title="${t('sel.bigger')}">+</button></span>` +
+      `<button id="bAllSize">${t('sel.sizeAll')}</button>`;
+  };
   if (sel.kind === 'room') {
     const r = plan.rooms.find(x => x.id === sel.id);
     if (!r) { el.innerHTML = ''; return; }
@@ -133,7 +139,7 @@ function renderSel() {
   } else if (sel.kind === 'label') {
     const l = plan.labels.find(x => x.id === sel.id);
     if (!l) { el.innerHTML = ''; return; }
-    el.innerHTML = `<span class="lbl">${t('label.label')}</span><input id="ltext" type="text" value="${esc(l.text)}" maxlength="120" aria-label="${t('label.text')}">${rot}${del}`;
+    el.innerHTML = `<span class="lbl">${t('label.label')}</span><input id="ltext" type="text" value="${esc(l.text)}" maxlength="120" aria-label="${t('label.text')}">${rot}${sizeBtns(l)}${del}`;
     editOnce($('#ltext'), v => { l.text = v; });
   } else {
     const it = plan.items.find(x => x.id === sel.id);
@@ -143,11 +149,13 @@ function renderSel() {
     const label = sym.circuit
       ? t('sel.item', { name: name[0].toUpperCase() + name.slice(1), circuit: c ? cLabel(c) : t('circuit.none') })
       : name[0].toUpperCase() + name.slice(1);
-    el.innerHTML = `<span class="lbl">${label}</span>${sym.circuit ? circSelect(it.c) : ''}${rot}${del}`;
+    el.innerHTML = `<span class="lbl">${label}</span>${sym.circuit ? circSelect(it.c) : ''}${rot}${sizeBtns(it)}${del}`;
   }
   const sc = $('#selCirc');
   if (sc) sc.addEventListener('change', () => assignSelection(sc.value));
   $('#bDel').addEventListener('click', deleteSelection);
+  const bs = $('#bSmall'), bb = $('#bBig'), ba = $('#bAllSize');
+  if (bs) { bs.addEventListener('click', () => scaleSelection(-1)); bb.addEventListener('click', () => scaleSelection(1)); ba.addEventListener('click', scaleAll); }
   const br = $('#bRot');
   if (br) br.addEventListener('click', rotateSelection);
 }
