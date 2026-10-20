@@ -23,8 +23,8 @@ function buildBar() {
   const sym = k => `<button data-tool="${k}" class="sym" aria-label="${esc(t(`sym.${k}.btn`))}" title="${esc(t(`sym.${k}.btn`))}">${symbolIcon(k)}</button>`;
   $('#bar').innerHTML =
     btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('zone', t('tool.zone')) +
-    `<button id="bTpl">${t('tool.template')}</button><span class="sep"></span>` +
-    SYMBOL_TYPES.map(sym).join('') + btn('cable', t('tool.cable')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
+    `<button id="bTpl">${t('tool.template')}</button>` + btn('label', t('tool.label')) + '<span class="sep"></span>' +
+    SYMBOL_TYPES.map(sym).join('') + btn('cable', t('tool.cable')) + '<span class="sep"></span>' +
     `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
     `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));

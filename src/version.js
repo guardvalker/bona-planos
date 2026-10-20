@@ -1,7 +1,8 @@
 // Subir APP_VERSION y agregar una entrada en CHANGELOG (claves de i18n.js) en cada cambio publicado.
 // También subir CACHE_NAME en sw.js: si no, las instalaciones existentes no ven el cambio.
-export const APP_VERSION = '1.4.1';
+export const APP_VERSION = '1.5.0';
 export const CHANGELOG = [
+  { v: '1.5.0', date: '2026-10-19', items: ['cl.1_5_0'] },
   { v: '1.4.1', date: '2026-10-19', items: ['cl.1_4_1'] },
   { v: '1.4.0', date: '2026-10-19', items: ['cl.1_4_0'] },
   { v: '1.3.4', date: '2026-10-01', items: ['cl.1_3_4'] },

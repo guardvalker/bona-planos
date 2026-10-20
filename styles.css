@@ -186,3 +186,5 @@ button.gear{flex:none;min-width:44px;font-size:18px;padding:4px 10px}
 .setgroup .help{font-size:13px;color:var(--mute)}
 .seg button{flex:1}
 #hCloud{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--btn);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:6px 10px;color:var(--ink);text-align:left}
+#bar button.sym{--sym-in:var(--btn)}
+#bar button.sym.on{--sym-in:var(--btn-on)}

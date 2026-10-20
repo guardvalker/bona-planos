@@ -9,66 +9,63 @@ import { t } from './i18n.js';
 // `draw(x, y, col)` devuelve markup SVG centrado en (x, y); `col` es el color del circuito.
 const txt = (x, y, s, size = 8, fill = '#fff') =>
   `<text x="${x}" y="${y + size * 0.36}" font-size="${size}" font-weight="700" fill="${fill}" text-anchor="middle">${s}</text>`;
-const prongs = (x, y) => `M${x - 3} ${y - 4}v4M${x + 3} ${y - 4}v4M${x} ${y + 2}v4`;
+
+// Simbología al estilo de los planos IRAM/IEC: trazo grueso del color del circuito sobre fondo del plano,
+// para que se lea chico y en la barra. Los dibujos con "pata" (tomas, llave) se orientan con la rotación.
+const stroke = (col, w = 2.4) => `stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
+const ring = (x, y, r, col) => `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--room)" ${stroke(col)}/>`;
 
 export const SYMBOLS = {
+  // Tomacorriente: círculo con una raya hacia la pared.
   toma: {
     circuit: true, boca: true,
-    draw: (x, y, col) =>
-      `<circle cx="${x}" cy="${y}" r="9" fill="${col}"/>` +
-      `<path d="${prongs(x, y)}" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/>`
+    draw: (x, y, col) => ring(x, y + 2, 8, col) + `<path d="M${x} ${y - 6}v-8" ${stroke(col, 2.8)} fill="none"/><circle cx="${x}" cy="${y + 2}" r="2.6" fill="${col}"/>`
   },
+  // Toma doble: círculo con rayas a ambos lados.
   tomadoble: {
     circuit: true, boca: true,
-    draw: (x, y, col) =>
-      `<rect x="${x - 14}" y="${y - 9}" width="28" height="18" rx="9" fill="${col}"/>` +
-      `<path d="${prongs(x - 6, y)}${prongs(x + 6, y)}" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none"/>`
+    draw: (x, y, col) => ring(x, y, 8, col) + `<path d="M${x} ${y - 8}v-6M${x} ${y + 8}v6" ${stroke(col, 2.8)} fill="none"/><circle cx="${x}" cy="${y}" r="2.6" fill="${col}"/>`
   },
+  // Toma para aire acondicionado: toma con la sigla adentro.
   tomaaa: {
     circuit: true, boca: true,
-    draw: (x, y, col) => `<circle cx="${x}" cy="${y}" r="9" fill="${col}"/>${txt(x, y, t('sym.tomaaa.abbr'))}`
+    draw: (x, y, col) => `<circle cx="${x}" cy="${y + 2}" r="10" fill="${col}"/><path d="M${x} ${y - 8}v-6" ${stroke(col, 2.8)} fill="none"/>${txt(x, y + 2, t('sym.tomaaa.abbr'), 9)}`
   },
   tv: {
     circuit: true, boca: true,
-    draw: (x, y, col) => `<rect x="${x - 10}" y="${y - 7}" width="20" height="14" rx="3" fill="${col}"/>${txt(x, y, t('sym.tv.abbr'))}`
+    draw: (x, y, col) => `<rect x="${x - 12}" y="${y - 8}" width="24" height="16" rx="3" fill="${col}"/>${txt(x, y, t('sym.tv.abbr'), 10)}`
   },
+  // Boca de luz en techo: círculo con cruz.
   luz: {
     circuit: true, boca: true,
-    draw: (x, y, col) =>
-      `<circle cx="${x}" cy="${y}" r="9" fill="var(--room)" stroke="${col}" stroke-width="2.4"/>` +
-      `<path d="M${x - 5} ${y - 5}L${x + 5} ${y + 5}M${x + 5} ${y - 5}L${x - 5} ${y + 5}" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`
+    draw: (x, y, col) => ring(x, y, 10, col) + `<path d="M${x - 7} ${y - 7}L${x + 7} ${y + 7}M${x + 7} ${y - 7}L${x - 7} ${y + 7}" ${stroke(col, 2.6)} fill="none"/>`
   },
-  ventilador: {
-    circuit: true, boca: true,
-    draw: (x, y, col) =>
-      `<circle cx="${x}" cy="${y}" r="10" fill="var(--room)" stroke="${col}" stroke-width="2"/>` +
-      [0, 90, 180, 270].map(a => `<ellipse cx="${x}" cy="${y - 5}" rx="2.6" ry="4.4" fill="${col}" transform="rotate(${a} ${x} ${y})"/>`).join('')
-  },
+  // Llave (interruptor de un punto): círculo lleno con raya oblicua y trazo.
   llave: {
     circuit: true, boca: true,
     draw: (x, y, col) =>
-      `<rect x="${x - 7}" y="${y - 7}" width="14" height="14" rx="3" fill="${col}"/>` +
-      `<path d="M${x - 3} ${y + 3}L${x + 3} ${y - 3}" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`
+      `<circle cx="${x - 4}" cy="${y + 5}" r="4.5" fill="${col}"/>` +
+      `<path d="M${x - 1} ${y + 2}L${x + 8} ${y - 9}M${x + 4} ${y - 10}l7 5" ${stroke(col, 2.6)} fill="none"/>`
   },
   timbre: {
     circuit: true, boca: true,
     draw: (x, y, col) =>
-      `<circle cx="${x}" cy="${y}" r="10" fill="var(--room)" stroke="${col}" stroke-width="2"/>` +
-      `<path d="M${x - 5} ${y + 3}h10M${x - 4} ${y + 3}q0 -8 4 -8q4 0 4 8" stroke="${col}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` +
-      `<circle cx="${x}" cy="${y + 6}" r="1.5" fill="${col}"/>`
+      ring(x, y, 11, col) +
+      `<path d="M${x - 6} ${y + 4}h12M${x - 4.5} ${y + 4}q0 -9 4.5 -9q4.5 0 4.5 9" ${stroke(col, 2)} fill="none"/>` +
+      `<circle cx="${x}" cy="${y + 7.5}" r="1.8" fill="${col}"/>`
   },
+  // Tablero: rectángulo lleno con la sigla.
   tablero: {
     circuit: false, boca: false,
     draw: (x, y) =>
-      `<rect x="${x - 12}" y="${y - 12}" width="24" height="24" rx="3" fill="#1d2b38" stroke="#fff" stroke-width="1"/>${txt(x, y, t('sym.tablero.abbr'), 11)}`
+      `<rect x="${x - 14}" y="${y - 11}" width="28" height="22" rx="2" fill="#1d2b38" stroke="#fff" stroke-width="1.2"/>${txt(x, y, t('sym.tablero.abbr'), 12)}`
   },
-  // Termomagnética: se ubica junto al tablero y se asigna al circuito que protege.
+  // Termomagnética: contacto con cruz, cuchilla y bornes (símbolo de interruptor automático).
   termica: {
     circuit: true, boca: false,
     draw: (x, y, col) =>
-      `<rect x="${x - 6}" y="${y - 9}" width="12" height="18" rx="2" fill="${col}"/>` +
-      `<rect x="${x - 3}" y="${y - 6}" width="6" height="6" rx="1" fill="#fff"/>` +
-      `<path d="M${x - 3} ${y + 4}h6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`
+      `<rect x="${x - 8}" y="${y - 12}" width="16" height="24" rx="2" fill="${col}"/>` +
+      `<path d="M${x} ${y - 10}v5M${x} ${y + 10}v-5M${x} ${y - 5}l5 10M${x - 3.5} ${y - 8.5}l7 7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" fill="none"/>`
   }
 };
 
@@ -82,4 +79,4 @@ export function drawSymbol(it, col) {
 
 // Ícono para la barra: el mismo dibujo del registro, centrado en 0,0.
 export const symbolIcon = (type, col = 'currentColor') =>
-  `<svg viewBox="-16 -14 32 28" width="28" height="24" aria-hidden="true" focusable="false">${SYMBOLS[type].draw(0, 0, col)}</svg>`;
+  `<svg viewBox="-16 -14 32 28" width="28" height="24" aria-hidden="true" focusable="false">${SYMBOLS[type].draw(0, 0, col).replaceAll('#fff', 'var(--sym-in)')}</svg>`;

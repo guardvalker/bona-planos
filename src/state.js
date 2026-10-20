@@ -71,9 +71,10 @@ export function normalize(d) {
   }).filter(Boolean);
   p.items = d.items.map(it => {
     const x = num(it && it.x), y = num(it && it.y);
-    if (x === null || y === null || !SYMBOLS[it.type]) return null;
+    const type = it && it.type === 'ventilador' ? 'luz' : it && it.type;   // el ventilador se quitó: pasa a ser una boca de luz
+    if (x === null || y === null || !SYMBOLS[type]) return null;
     const c = p.circuits.some(c => c.id === it.c) ? it.c : null;
-    return { id: safeId(it.id) || uid(), type: it.type, x, y, c, rot: safeRot(it.rot) };
+    return { id: safeId(it.id) || uid(), type, x, y, c, rot: safeRot(it.rot) };
   }).filter(Boolean);
   p.labels = (Array.isArray(d.labels) ? d.labels : []).map(l => {
     const x = num(l && l.x), y = num(l && l.y), text = str(l && l.text, 120);
