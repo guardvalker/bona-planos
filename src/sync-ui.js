@@ -12,7 +12,7 @@ export function initSyncUI(sync) {
 
   /* ---------- markup ---------- */
   $('#home .home-top').insertAdjacentHTML('afterend', '<div id="syncNotes" aria-live="polite"></div>');
-  $('#home .foot').insertAdjacentHTML('afterbegin', '<button id="hCloud"></button>');
+  $('#setAcct').insertAdjacentHTML('afterbegin', `<span class="help">${t('set.account')}</span><button id="hCloud"></button>`);
   document.body.insertAdjacentHTML('beforeend', `
     <div id="acct" class="overlay" role="dialog" aria-modal="true" aria-labelledby="acTitle">
       <div class="box">
@@ -89,6 +89,7 @@ export function initSyncUI(sync) {
     if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); ($('#acSend') || $('#acVerify')).click(); }
   });
   $('#hCloud').addEventListener('click', () => {
+    $('#settings').classList.remove('show');
     msg = ''; renderDialog();
     $('#acct').classList.add('show');
     const first = $('#acEmail') || $('#acNow');

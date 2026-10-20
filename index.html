@@ -11,6 +11,18 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<script>
+  // Tema elegido en Ajustes, aplicado antes de pintar para evitar el flash. Sin elección = sigue al sistema.
+  (function () {
+    try {
+      var t = localStorage.getItem('bona_planos_theme');
+      if (t === 'light' || t === 'dark') {
+        document.documentElement.setAttribute('data-theme', t);
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.removeAttribute('media'); m.setAttribute('content', t === 'dark' ? '#18222c' : '#ffffff'); });
+      }
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body data-view="home">
@@ -18,11 +30,10 @@
 <main id="home">
   <div class="home-top">
     <h1 data-i18n="home.title"></h1>
-    <span class="home-actions"><button id="hImport" data-i18n="home.import"></button><button id="hNew" class="primary" data-i18n="home.new"></button></span>
+    <span class="home-actions"><button id="hImport" data-i18n="home.import"></button><button id="hNew" class="primary" data-i18n="home.new"></button><button id="hSet" class="gear" data-i18n-aria="set.open" data-i18n-title="set.open">⚙</button></span>
   </div>
   <p id="hWarn" class="warn" hidden data-i18n="home.notPersistent"></p>
   <div id="hList" data-i18n-aria="home.list"></div>
-  <div class="foot"><span id="hVer"></span><button id="hAbout" data-i18n="about.open"></button></div>
 </main>
 
 <div id="editor" role="main">
@@ -30,6 +41,7 @@
   <h1 class="sr" data-i18n="app.title"></h1>
   <button id="bBack" data-i18n-aria="nav.backAria">‹ <span data-i18n="nav.back"></span></button>
   <input id="pname" type="text" maxlength="80" data-i18n-aria="plan.name">
+  <button id="eSet" class="gear" data-i18n-aria="set.open" data-i18n-title="set.open">⚙</button>
 </div>
 <div id="bar" role="toolbar"></div>
 <div id="hint" aria-live="polite"></div>
@@ -117,14 +129,36 @@
   <div class="box">
     <strong id="abTitle" data-i18n="about.title"></strong>
     <div id="abBody"></div>
-    <div class="row" role="group" data-i18n-aria="lang.label">
-      <button id="lEs" data-i18n="lang.es"></button>
-      <button id="lEn" data-i18n="lang.en"></button>
-    </div>
     <div class="row">
-      <button id="abUpdate" data-i18n="about.update"></button>
       <button id="abClose" data-i18n="data.close"></button>
     </div>
+  </div>
+</div>
+
+<div id="settings" class="overlay" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="box">
+    <strong id="setTitle" data-i18n="set.title"></strong>
+    <div class="setgroup"><span class="help" data-i18n="set.theme"></span>
+      <div class="row seg" role="group" data-i18n-aria="set.theme">
+        <button data-theme-opt="auto" data-i18n="set.themeAuto"></button>
+        <button data-theme-opt="light" data-i18n="set.themeLight"></button>
+        <button data-theme-opt="dark" data-i18n="set.themeDark"></button>
+      </div>
+    </div>
+    <div class="setgroup"><span class="help" data-i18n="lang.label"></span>
+      <div class="row seg" role="group" data-i18n-aria="lang.label">
+        <button id="lEs" data-i18n="lang.es"></button>
+        <button id="lEn" data-i18n="lang.en"></button>
+      </div>
+    </div>
+    <div id="setAcct" class="setgroup"></div>
+    <div class="setgroup"><span class="help" id="setVer"></span>
+      <div class="row">
+        <button id="abOpen" data-i18n="about.open"></button>
+        <button id="abUpdate" data-i18n="about.update"></button>
+      </div>
+    </div>
+    <div class="row"><button id="setClose" data-i18n="data.close"></button></div>
   </div>
 </div>
 

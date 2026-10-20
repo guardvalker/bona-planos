@@ -5,6 +5,7 @@ import { handlers } from './tools.js';
 import { initUI, render } from './ui.js';
 import { loadPlan, savePlan, requestPersistence } from './storage.js';
 import { initHome, renderHome } from './home.js';
+import { initSettings } from './settings.js';
 
 let sync = null, openId = null;   // sync opcional: solo existe si hay config.js con credenciales
 
@@ -12,6 +13,7 @@ applyStatic();
 initCanvas(handlers);
 initUI({ goHome: () => { location.hash = '#/'; } });
 initHome({ open: id => { location.hash = '#/p/' + id; } });
+initSettings();
 
 /* ---------- autoguardado ---------- */
 let timer = null, dirty = false, editing = false;
