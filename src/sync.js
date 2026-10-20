@@ -34,9 +34,11 @@ function loadLib() {
   });
 }
 
-// ¿Hay una sesión guardada de una visita anterior? (supabase-js la guarda en localStorage)
+// ¿Hay una sesión guardada de una visita anterior? (supabase-js la guarda en localStorage
+// bajo el storageKey de abajo; la forma vieja `sb-*-auth-token` queda por las dudas)
+const AUTH_KEY = 'bona-planos-auth';
 export function hasStoredSession() {
-  try { return Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; }
+  try { return localStorage.getItem(AUTH_KEY) !== null || Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (e) { return false; }
 }
 
 export async function initSync(cfg, hooks = {}) {
@@ -51,7 +53,7 @@ export async function initSync(cfg, hooks = {}) {
     if (sb) return sb;
     const lib = await loadLib();
     // storageKey propio: sin esto todas las apps del mismo origen compartían una sola sesión.
-    sb = lib.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: 'bona-planos-auth', persistSession: true, autoRefreshToken: true } });
+    sb = lib.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: AUTH_KEY, persistSession: true, autoRefreshToken: true } });
     sb.auth.onAuthStateChange((_ev, session) => {
       const next = session ? session.user : null;
       if (next && (!user || user.id !== next.id)) { user = next; emit(); request(0); }
