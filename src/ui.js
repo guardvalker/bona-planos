@@ -1,14 +1,14 @@
 // Barra de herramientas, chips de circuitos, panel de selección y diálogo de datos.
 import {
   getPlan, session, circuitOf, circuitIndex, checkpoint, notify, summarize, describeRow, normalize, U,
-  replacePlan, undo, redo, canUndo, canRedo, techText, ROOM_TEMPLATES, PALETTE
+  replacePlan, undo, redo, canUndo, canRedo, techText, PALETTE
 } from './state.js';
 import { exportPng, exportSvg, printPlan, exportJson, readPlanFile } from './export.js';
-import { SYMBOLS, SYMBOL_TYPES, symbolIcon } from './symbols.js';
+import { SYMBOLS, BAR_TYPES, GROUPS, symbolIcon } from './symbols.js';
 import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
-  setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection, armTemplate,
+  setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection,
   finishCable, cancelCable, deleteVertex, setZoneColor
 } from './tools.js';
 
@@ -17,25 +17,31 @@ const cShort = id => t('circuit.short', { n: circuitIndex(id) + 1 });
 const cLabel = c => `${cShort(c.id)} ${esc(c.name)}`;
 
 /* ---------- barra ---------- */
+let panelOpen = false;   // submenú de Tablero abierto
+
 function buildBar() {
   const btn = (tool, label) => `<button data-tool="${tool}">${esc(label)}</button>`;
-  // Los símbolos son solo ícono (dibujados desde el registro): con 10 no entran con texto en 360 px.
-  const sym = k => `<button data-tool="${k}" class="sym" aria-label="${esc(t(`sym.${k}.btn`))}" title="${esc(t(`sym.${k}.btn`))}">${symbolIcon(k)}</button>`;
+  // Los símbolos son solo ícono (dibujados desde el registro).
+  const sym = (k, withName = false) => `<button data-tool="${k}" class="sym" aria-label="${esc(t(`sym.${k}.btn`))}" title="${esc(t(`sym.${k}.btn`))}">${symbolIcon(k)}${withName ? `<span>${esc(t(`sym.${k}.abbr`))}</span>` : ''}</button>`;
   $('#bar').innerHTML =
-    btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('zone', t('tool.zone')) +
-    `<button id="bTpl">${t('tool.template')}</button>` + btn('label', t('tool.label')) + '<span class="sep"></span>' +
-    SYMBOL_TYPES.map(sym).join('') + btn('cable', t('tool.cable')) + '<span class="sep"></span>' +
+    btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('zone', t('tool.zone')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
+    BAR_TYPES.map(k => sym(k)).join('') + `<button id="bPanel" aria-haspopup="true">${esc(t('tool.panel'))} ▾</button>` + btn('cable', t('tool.cable')) + '<span class="sep"></span>' +
     `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
     `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));
+  $('#sub').innerHTML = GROUPS.tablero.map(k => sym(k, true)).join('');
 }
 
 function renderBar() {
-  document.querySelectorAll('#bar [data-tool]').forEach(b => {
+  document.querySelectorAll('#bar [data-tool], #sub [data-tool]').forEach(b => {
     const on = b.dataset.tool === session.tool;
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', on);
   });
+  const inPanel = GROUPS.tablero.includes(session.tool);
+  $('#bPanel').classList.toggle('on', inPanel || panelOpen);
+  $('#bPanel').setAttribute('aria-expanded', panelOpen);
+  $('#sub').hidden = !panelOpen;
   $('#bUndo').disabled = !canUndo();
   $('#bRedo').disabled = !canRedo();
 }
@@ -45,7 +51,7 @@ function renderHint() {
   const plan = getPlan(), tool = session.tool;
   let s;
   if (tool === 'select') s = t('hint.select');
-  else if (tool === 'room') s = session.template ? t('hint.template', { name: t(`tpl.${session.template.key}`) }) : t('hint.room');
+  else if (tool === 'room') s = t('hint.room');
   else if (tool === 'zone') s = t('hint.zone');
   else if (tool === 'label') s = t('hint.label');
   else if (tool === 'cable') s = t('hint.cable', { circuit: circuitOf(plan.active) ? `${cShort(plan.active)} ${circuitOf(plan.active).name}` : t('circuit.none') });
@@ -201,17 +207,18 @@ export function initUI({ goHome }) {
   editOnce($('#pname'), v => { getPlan().name = v; });
 
   $('#bar').addEventListener('click', e => {
+    if (e.target.closest('#bPanel')) { panelOpen = !panelOpen; renderBar(); return; }
     const b = e.target.closest('[data-tool]');
-    if (b) setTool(b.dataset.tool);
+    if (!b) return;
+    panelOpen = false;
+    setTool(b.dataset.tool);
   });
-  $('#bTpl').addEventListener('click', () => { $('#tpl').classList.add('show'); $('#tplList button').focus(); });
-  $('#tplList').innerHTML = ROOM_TEMPLATES.map(x =>
-    `<button data-tpl="${x.key}">${esc(t(`tpl.${x.key}`))} <small>${fmtNum(x.w)} × ${fmtNum(x.h)} m</small></button>`).join('');
-  $('#tplList').addEventListener('click', e => {
-    const b = e.target.closest('[data-tpl]');
-    if (b) { $('#tpl').classList.remove('show'); armTemplate(b.dataset.tpl); }
+  $('#sub').addEventListener('click', e => {
+    const b = e.target.closest('[data-tool]');
+    if (!b) return;
+    panelOpen = false;
+    setTool(b.dataset.tool);
   });
-  $('#tplClose').addEventListener('click', () => $('#tpl').classList.remove('show'));
   $('#bUndo').addEventListener('click', undo);
   $('#bRedo').addEventListener('click', redo);
   $('#bClear').addEventListener('click', clearPlan);
@@ -276,7 +283,7 @@ export function initUI({ goHome }) {
     else if (e.key === 'Escape') {
       if ($('#modal').classList.contains('show')) closeModal();
       else if ($('#exp').classList.contains('show')) closeExport();
-      else if ($('#tpl').classList.contains('show')) $('#tpl').classList.remove('show');
+      else if (panelOpen) { panelOpen = false; renderBar(); }
       else setTool('select');
     }
   });

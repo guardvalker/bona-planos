@@ -1,7 +1,7 @@
 // Herramientas: qué hace cada gesto sobre el plano y las acciones de edición.
 // Los gestos usan `checkpoint()` antes de mutar, una sola vez por gesto.
 import {
-  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, ROOM_TEMPLATES, circuitOf,
+  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, circuitOf,
   checkpoint, dropCheckpoint, notify, setTool, endDraft
 } from './state.js';
 import { askText } from './dialogs.js';
@@ -17,17 +17,6 @@ export const handlers = {
     const plan = getPlan();
     const tool = session.tool;
 
-    if (tool === 'room' && session.template) {
-      // plantilla: un toque ubica el ambiente con medidas típicas
-      const tpl = session.template;
-      checkpoint();
-      const r = { id: uid(), x: snap(p.x), y: snap(p.y), w: Math.round(tpl.w * U), h: Math.round(tpl.h * U), name: t(`tpl.${tpl.key}`) };
-      plan.rooms.push(r);
-      session.sel = { kind: 'room', id: r.id };
-      session.template = null; session.tool = 'select';
-      notify('data');
-      return { type: 'place' };
-    }
     if (tool === 'label') {
       const x = snap(p.x, ISNAP), y = snap(p.y, ISNAP);
       askText(t('label.prompt'), '').then(text => {
@@ -256,13 +245,6 @@ export function rotateSelection() {
   checkpoint();
   obj.rot = ((obj.rot || 0) + 90) % 360;
   notify('data');
-}
-
-// Elegir una plantilla arma la herramienta Ambiente: el próximo toque la ubica.
-export function armTemplate(key) {
-  session.template = ROOM_TEMPLATES.find(x => x.key === key) || null;
-  session.tool = 'room'; session.sel = null;
-  notify('ui');
 }
 
 // Tocar un chip: activa el circuito y, si hay un elemento seleccionado, se lo reasigna.

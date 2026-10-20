@@ -154,9 +154,6 @@ button.primary{background:var(--accent);color:var(--btn-on-ink);border-color:var
 
 #bar button.sym{padding:4px 8px;display:flex;align-items:center;justify-content:center;min-width:44px}
 .col{display:flex;flex-direction:column;gap:6px}
-#tpl .help{font-size:13px;color:var(--mute)}
-#tplList button{text-align:left;display:flex;justify-content:space-between;gap:8px}
-#tplList small{color:var(--mute)}
 .cblock{border-top:1px solid var(--line);padding:4px 0 8px}
 .cblock:first-child{border-top:0}
 .tech{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 4px 34px}
@@ -186,5 +183,8 @@ button.gear{flex:none;min-width:44px;font-size:18px;padding:4px 10px}
 .setgroup .help{font-size:13px;color:var(--mute)}
 .seg button{flex:1}
 #hCloud{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--btn);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:6px 10px;color:var(--ink);text-align:left}
-#bar button.sym{--sym-in:var(--btn)}
-#bar button.sym.on{--sym-in:var(--btn-on)}
+#bar button.sym,#sub button.sym{--sym-in:var(--btn)}
+#bar button.sym.on,#sub button.sym.on{--sym-in:var(--btn-on)}
+#sub{display:flex;gap:6px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
+#sub[hidden]{display:none}
+#sub button.sym{display:flex;align-items:center;gap:6px;min-width:44px;padding:4px 10px}

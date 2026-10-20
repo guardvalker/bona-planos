@@ -64,7 +64,7 @@ export function buildSvg(plan = getPlan()) {
     if (!sym) continue;
     const c = plan.circuits.find(c => c.id === it.c);
     const col = c ? c.color : C.none;
-    g += drawSymbol(it, col).replaceAll('var(--room)', C.room);
+    g += drawSymbol(it, col).replaceAll('var(--room)', C.room).replaceAll('var(--wall)', C.wall);
     if (sym.circuit && c) {
       g += `<text x="${it.x}" y="${it.y + 22}" font-size="10" font-weight="700" fill="${C.ink}" text-anchor="middle">${t('circuit.short', { n: plan.circuits.indexOf(c) + 1 })}</text>`;
     }

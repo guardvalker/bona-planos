@@ -96,7 +96,7 @@ let plan = newPlan();
 export const getPlan = () => plan;
 // sel: {kind:'room'|'zone'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable
 // draft: cable que se está dibujando (un solo checkpoint para todo el trazado)
-export const session = { tool: 'select', sel: null, template: null, draft: null };
+export const session = { tool: 'select', sel: null, draft: null };
 
 export const circuitOf = id => plan.circuits.find(c => c.id === id);
 export const circuitIndex = id => plan.circuits.findIndex(c => c.id === id);
@@ -135,7 +135,7 @@ export function redo() {
 export function setPlan(p) {
   plan = p;
   undoStack = []; redoStack = [];
-  session.sel = null; session.tool = 'select'; session.template = null; session.draft = null;
+  session.sel = null; session.tool = 'select'; session.draft = null;
   notify('load');
 }
 // Reemplaza el contenido del plano actual dejando el cambio deshacible.
@@ -171,7 +171,7 @@ export function setTool(tool) {
   if (tool !== 'cable') endDraft();
   session.tool = tool;
   if (tool !== 'select') session.sel = null;
-  if (tool !== 'room') session.template = null;
+  if (tool !== 'room')
   notify('ui');
 }
 
@@ -222,12 +222,3 @@ export function techText(c) {
   if (c.notes && c.notes.trim()) s += (s ? ' — ' : '') + c.notes.trim();
   return s;
 }
-
-/* ---------- plantillas de ambiente (medidas típicas, en metros) ---------- */
-export const ROOM_TEMPLATES = [
-  { key: 'bano', w: 1.75, h: 2.5 },
-  { key: 'cocina', w: 2.5, h: 3 },
-  { key: 'dormitorio', w: 3, h: 3.5 },
-  { key: 'living', w: 4, h: 5 },
-  { key: 'lavadero', w: 1.5, h: 2 }
-];
