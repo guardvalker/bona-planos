@@ -77,4 +77,18 @@ addEventListener('hashchange', () => { routing = routing.then(route); });
 routing = routing.then(route);
 
 requestPersistence();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  // Si ya había un service worker y toma el control uno nuevo, se recarga una vez para usar los archivos nuevos
+  // (lo editado ya se guardó solo: flush() corre al ocultar la página).
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloaded) return;
+    reloaded = true;
+    flush().finally(() => location.reload());
+  });
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // al volver a la app (PWA instalada) se busca una versión nueva
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+}

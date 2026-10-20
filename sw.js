@@ -1,6 +1,6 @@
-// Cache-first de la app shell. Al cambiar CUALQUIER archivo de ASSETS hay que
+// App shell: red primero y caché de respaldo. Al cambiar CUALQUIER archivo de ASSETS hay que
 // subir CACHE_NAME: si no, las instalaciones existentes siguen viendo la versión vieja.
-const CACHE_NAME = 'bona-planos-v31';
+const CACHE_NAME = 'bona-planos-v32';
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest',
   './src/main.js', './src/state.js', './src/canvas.js', './src/tools.js', './src/ui.js',
@@ -9,7 +9,12 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache:'reload' salta la caché HTTP (GitHub Pages cachea ~10 min): sin esto se guardaban archivos viejos.
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(c => Promise.all(ASSETS.map(u => c.add(new Request(u, { cache: 'reload' })))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -20,13 +25,14 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Primero la red (revalidando), con la caché como respaldo sin conexión: así siempre se ve la última versión.
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(hit => hit || fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE_NAME).then(c => c.put(req, copy)); }
       return res;
-    }))
+    }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error())))
   );
 });
