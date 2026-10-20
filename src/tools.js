@@ -7,6 +7,7 @@ import {
 import { askText } from './dialogs.js';
 import { SYMBOLS } from './symbols.js';
 import { t } from './i18n.js';
+import { unionRooms } from './geom.js';
 
 export const isPlaceTool = tool => tool in SYMBOLS;
 
@@ -62,6 +63,12 @@ export const handlers = {
       plan.items.push({ id: uid(), type: tool, x: snap(p.x, ISNAP), y: snap(p.y, ISNAP), c: SYMBOLS[tool].circuit ? plan.active : null, rot: 0 });
       notify('data');
       return { type: 'place' };
+    }
+    // modo "Unir": el próximo ambiente tocado se une al seleccionado
+    if (session.merge) {
+      if (hit && hit.k === 'room' && hit.id !== session.merge) { mergeRooms(session.merge, hit.id); return { type: 'place' }; }
+      session.merge = null; session.mergeErr = '';
+      if (!hit || hit.k !== 'room') { session.sel = null; notify('ui'); return null; }
     }
     // herramienta mover
     if (!hit) { session.sel = null; notify('ui'); return null; }
@@ -269,6 +276,28 @@ export function deleteVertex() {
   checkpoint();
   cb.pts.splice(sel.vi, 1);
   session.sel = { kind: 'cable', id: cb.id };
+  notify('data');
+}
+
+export function startMerge() {
+  const sel = session.sel;
+  if (!sel || sel.kind !== 'room' || getPlan().rooms.length < 2) return;
+  session.merge = sel.id; session.mergeErr = '';
+  notify('ui');
+}
+export function cancelMerge() { session.merge = null; session.mergeErr = ''; notify('ui'); }
+
+// Une el ambiente `bid` al `aid` (queda el nombre y el id del primero).
+function mergeRooms(aid, bid) {
+  const plan = getPlan(), a = plan.rooms.find(r => r.id === aid), b = plan.rooms.find(r => r.id === bid);
+  if (!a || !b) { cancelMerge(); return; }
+  const res = unionRooms(a.pts, b.pts);
+  if (res.error) { session.mergeErr = res.error; notify('ui'); return; }
+  checkpoint();
+  a.pts = res.pts;
+  plan.rooms = plan.rooms.filter(r => r.id !== bid);
+  session.merge = null; session.mergeErr = '';
+  session.sel = { kind: 'room', id: a.id };
   notify('data');
 }
 

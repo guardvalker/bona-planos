@@ -138,7 +138,7 @@ let plan = newPlan();
 export const getPlan = () => plan;
 // sel: {kind:'room'|'wall'|'zone'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable o esquina de un ambiente
 // draft: cable que se está dibujando (un solo checkpoint para todo el trazado)
-export const session = { tool: 'select', sel: null, draft: null };
+export const session = { tool: 'select', sel: null, draft: null, merge: null, mergeErr: '' };   // merge: id del ambiente al que se está uniendo otro
 
 export const circuitOf = id => plan.circuits.find(c => c.id === id);
 export const circuitIndex = id => plan.circuits.findIndex(c => c.id === id);
@@ -211,7 +211,7 @@ export function endDraft() {
 
 export function setTool(tool) {
   if (tool !== 'cable') endDraft();
-  session.tool = tool;
+  session.tool = tool; session.merge = null; session.mergeErr = '';
   if (tool !== 'select') session.sel = null;
   if (tool !== 'room')
   notify('ui');

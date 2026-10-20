@@ -9,7 +9,7 @@ import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
   setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection,
-  finishCable, cancelCable, deleteVertex, deleteRoomVertex, setZoneColor, assignSelection
+  finishCable, cancelCable, deleteVertex, deleteRoomVertex, startMerge, cancelMerge, setZoneColor, assignSelection
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -88,6 +88,11 @@ function renderSel() {
     $('#bCancel').addEventListener('click', cancelCable);
     return;
   }
+  if (session.merge && sel && sel.kind === 'room') {      // uniendo ambientes
+    el.innerHTML = `<span class="lbl">${t(session.mergeErr || 'merge.hint')}</span><button id="bMCancel">${t('cable.cancel')}</button>`;
+    $('#bMCancel').addEventListener('click', cancelMerge);
+    return;
+  }
   if (!sel) { el.innerHTML = ''; return; }
   const del = `<button id="bDel" class="danger">${t('sel.delete')}</button>`;
   const rot = `<button id="bRot">${t('sel.rotate')}</button>`;
@@ -96,10 +101,13 @@ function renderSel() {
     if (!r) { el.innerHTML = ''; return; }
     const canDrop = sel.vi !== undefined && r.pts.length > 3;
     el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}">` +
-      (canDrop ? `<button id="bRVert">${t('room.removeCorner')}</button>` : '') + del;
+      (canDrop ? `<button id="bRVert">${t('room.removeCorner')}</button>` : '') +
+      (plan.rooms.length > 1 ? `<button id="bMerge">${t('merge.btn')}</button>` : '') + del;
     editOnce($('#rname'), v => { r.name = v; });
     const bv = $('#bRVert');
     if (bv) bv.addEventListener('click', deleteRoomVertex);
+    const bm = $('#bMerge');
+    if (bm) bm.addEventListener('click', startMerge);
   } else if (sel.kind === 'wall') {
     el.innerHTML = `<span class="lbl">${t('wall.label')}</span>${del}`;
   } else if (sel.kind === 'zone') {
