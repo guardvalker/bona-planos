@@ -26,7 +26,6 @@ function buildBar() {
   $('#bar').innerHTML =
     btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('zone', t('tool.zone')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
     BAR_TYPES.map(k => sym(k)).join('') + `<button id="bPanel" aria-haspopup="true">${esc(t('tool.panel'))} ▾</button>` + btn('cable', t('tool.cable')) + '<span class="sep"></span>' +
-    `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
     `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));
   $('#sub').innerHTML = GROUPS.tablero.map(k => sym(k, true)).join('');
