@@ -8,7 +8,7 @@
 //     zones:[{id,x,y,w,h,name,color}],      recuadros punteados de color (horno, mostrador, etc.), sin circuito
 //     labels:[{id,x,y,text,rot,s}],           texto libre sobre el plano
 //     cables:[{id,c,pts:[[x,y],...]}],      recorrido aproximado de los conductores (c: circuito)
-//     circuits:[{id,name,color,prot,cable,rcd,notes,fade}],   fade: 0–.8, qué tanto se transparentan sus cables (0 = opacos)   datos técnicos opcionales (texto libre)
+//     circuits:[{id,name,color,prot,cable,rcd,notes,fade}],   fade: 0–.8, qué tanto se transparentan sus cables (0 = opacos); thick: grosor del cable (1.5–8, 3.5 por defecto)   datos técnicos opcionales (texto libre)
 //     active, iscale, lscale }          escala con la que nacen los elementos / etiquetas nuevos
 // v1/v2 (sin cables, labels, rot ni datos técnicos) y el formato del prototipo se siguen aceptando.
 // Unidades del mundo: 1 m = 40 u; snap 10 para ambientes y 5 para elementos.
@@ -57,6 +57,9 @@ export const safeScale = v => (Number.isFinite(+v) && +v > 0 ? Math.round(clamp(
 
 export const safeFade = v => (Number.isFinite(+v) ? Math.round(clamp(+v, 0, .8) * 10) / 10 : 0);
 
+export const CABLE_W = 3.5;
+export const safeThick = v => (Number.isFinite(+v) && +v > 0 ? Math.round(clamp(+v, 1.5, 8) * 2) / 2 : CABLE_W);
+
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const snap = (v, n = SNAP) => Math.round(v / n) * n;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -94,7 +97,7 @@ export function normalize(d) {
     id: safeId(c && c.id) || uid(),
     name: String((c && c.name) ?? '').slice(0, 60),
     color: safeColor(c && c.color, i),
-    fade: safeFade(c && c.fade), prot: str(c && c.prot, 60), cable: str(c && c.cable, 60), rcd: str(c && c.rcd, 60), notes: str(c && c.notes, 200)
+    fade: safeFade(c && c.fade), thick: safeThick(c && c.thick), prot: str(c && c.prot, 60), cable: str(c && c.cable, 60), rcd: str(c && c.rcd, 60), notes: str(c && c.notes, 200)
   }));
   p.rooms = d.rooms.map(r => {
     let pts = (Array.isArray(r && r.pts) ? r.pts : []).slice(0, 100)

@@ -1,6 +1,6 @@
 // Exportaciones: SVG autónomo (plano + leyenda + resumen), PNG, impresión/PDF y JSON.
 // El SVG usa colores fijos de tema claro: sale igual aunque la app esté en oscuro.
-import { getPlan, summarize, describeRow, techText, normalize, U, polyInfo, bbox, isRect } from './state.js';
+import { getPlan, summarize, describeRow, techText, normalize, U, polyInfo, bbox, isRect, CABLE_W } from './state.js';
 import { SYMBOLS, drawSymbol } from './symbols.js';
 import { t, tn, fmtNum, lang } from './i18n.js';
 import { esc } from './canvas.js';
@@ -62,9 +62,9 @@ export function buildSvg(plan = getPlan()) {
   for (const cb of plan.cables) {
     const c = plan.circuits.find(c => c.id === cb.c), col = c ? c.color : C.none;
     const pts = cb.pts.map(q => q.join(',')).join(' ');
-    const op = 1 - ((c && c.fade) || 0);
-    g += `<g${op < 1 ? ` opacity="${op}"` : ''}><polyline points="${pts}" fill="none" stroke="${C.room}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`
-      + `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+    const op = 1 - ((c && c.fade) || 0), w = (c && c.thick) || CABLE_W;
+    g += `<g${op < 1 ? ` opacity="${op}"` : ''}><polyline points="${pts}" fill="none" stroke="${C.room}" stroke-width="${w + 2.5}" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`
+      + `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="${w}" stroke-dasharray="${w * 2.6} ${w * 1.4}" stroke-linecap="round" stroke-linejoin="round"/></g>`;
   }
   for (const it of plan.items) {
     const sym = SYMBOLS[it.type];

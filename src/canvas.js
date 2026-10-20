@@ -1,7 +1,7 @@
 // Render SVG del plano, vista (pan/zoom/pinch) y entrada por puntero.
 // Lo que pasa al tocar/arrastrar lo decide tools.js; acá solo se traducen los
 // eventos a coordenadas del mundo y se maneja el desplazamiento y el zoom.
-import { getPlan, session, circuitOf, circuitIndex, clamp, U, polyInfo, isRect, bbox } from './state.js';
+import { getPlan, session, circuitOf, circuitIndex, clamp, U, CABLE_W, polyInfo, isRect, bbox } from './state.js';
 import { SYMBOLS, drawSymbol } from './symbols.js';
 import { t, fmtNum } from './i18n.js';
 
@@ -50,11 +50,12 @@ function cableMarkup(cb) {
   const c = circuitOf(cb.c), col = c ? c.color : '#5d6b78';
   const sel = session.sel && session.sel.kind === 'cable' && session.sel.id === cb.id;
   const pts = pointsAttr(cb.pts), cap = 'stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const w = (c && c.thick) || CABLE_W;
   const op = sel ? 1 : 1 - ((c && c.fade) || 0);                      // el cable seleccionado se ve entero
   let h = `<g data-k="cable" data-id="${cb.id}" style="cursor:pointer"${op < 1 ? ` opacity="${op}"` : ''}>` +
     `<polyline points="${pts}" stroke="transparent" stroke-width="22" ${cap}/>` +
-    `<polyline points="${pts}" stroke="var(--room)" stroke-width="${sel ? 8 : 6}" opacity=".9" ${cap}/>` +
-    `<polyline points="${pts}" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" ${cap}/></g>`;
+    `<polyline points="${pts}" stroke="var(--room)" stroke-width="${w + (sel ? 4.5 : 2.5)}" opacity=".9" ${cap}/>` +
+    `<polyline points="${pts}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${w * 2.6} ${w * 1.4}" ${cap}/></g>`;
   if (session.draft && session.draft.id === cb.id) {
     // en trazado: puntos chicos, sin interacción
     h += cb.pts.map(q => `<circle cx="${q[0]}" cy="${q[1]}" r="4.5" fill="var(--room)" stroke="${col}" stroke-width="2" pointer-events="none"/>`).join('');
