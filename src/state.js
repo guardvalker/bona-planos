@@ -4,6 +4,7 @@
 //   { v, id, name, updatedAt, units:{perMeter,snap},
 //     rooms:[{id,x,y,w,h,name}],
 //     items:[{id,type,x,y,c,rot}],          type: clave de SYMBOLS; rot: 0|90|180|270
+//     zones:[{id,x,y,w,h,name,color}],      recuadros punteados de color (horno, mostrador, etc.), sin circuito
 //     labels:[{id,x,y,text,rot}],           texto libre sobre el plano
 //     cables:[{id,c,pts:[[x,y],...]}],      recorrido aproximado de los conductores (c: circuito)
 //     circuits:[{id,name,color,prot,cable,rcd,notes}],   datos técnicos opcionales (texto libre)
@@ -28,7 +29,7 @@ export function newPlan(name = '') {
     v: 3, id: crypto.randomUUID ? crypto.randomUUID() : uid() + uid(), name,
     updatedAt: new Date().toISOString(),
     units: { perMeter: U, snap: SNAP },
-    rooms: [], items: [], labels: [], cables: [],
+    rooms: [], items: [], labels: [], cables: [], zones: [],
     circuits: [
       { id: 'c1', name: t('circuit.lighting'), color: PALETTE[0] },
       { id: 'c2', name: t('circuit.sockets'), color: PALETTE[1] },
@@ -63,6 +64,11 @@ export function normalize(d) {
     if ([x, y, w, h].includes(null)) return null;
     return { id: safeId(r.id) || uid(), x, y, w: Math.max(0, w), h: Math.max(0, h), name: String(r.name ?? '').slice(0, 60) };
   }).filter(Boolean);
+  p.zones = (Array.isArray(d.zones) ? d.zones : []).map((z, i) => {
+    const x = num(z && z.x), y = num(z && z.y), w = num(z && z.w), h = num(z && z.h);
+    if ([x, y, w, h].includes(null)) return null;
+    return { id: safeId(z.id) || uid(), x, y, w: Math.max(0, w), h: Math.max(0, h), name: str(z.name, 60), color: safeColor(z.color, i) };
+  }).filter(Boolean);
   p.items = d.items.map(it => {
     const x = num(it && it.x), y = num(it && it.y);
     if (x === null || y === null || !SYMBOLS[it.type]) return null;
@@ -87,7 +93,7 @@ export function normalize(d) {
 /* ---------- estado ---------- */
 let plan = newPlan();
 export const getPlan = () => plan;
-// sel: {kind:'room'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable
+// sel: {kind:'room'|'zone'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable
 // draft: cable que se está dibujando (un solo checkpoint para todo el trazado)
 export const session = { tool: 'select', sel: null, template: null, draft: null };
 

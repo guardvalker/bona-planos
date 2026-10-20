@@ -18,6 +18,7 @@ export function buildSvg(plan = getPlan()) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const ext = (a, b, c, d) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, c); y1 = Math.max(y1, d); };
   plan.rooms.forEach(r => ext(r.x - 2, r.y - 2, r.x + r.w + 2, r.y + r.h + 2));
+  plan.zones.forEach(z => ext(z.x - 3, z.y - 20, z.x + z.w + 3, z.y + z.h + 3));
   plan.items.forEach(i => ext(i.x - 16, i.y - 16, i.x + 16, i.y + 28));
   plan.cables.forEach(cb => cb.pts.forEach(q => ext(q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4)));
   plan.labels.forEach(l => {
@@ -47,6 +48,10 @@ export function buildSvg(plan = getPlan()) {
     g += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${C.room}" stroke="${C.wall}" stroke-width="3"/>`
       + `<text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 - 2}" font-size="13" font-weight="600" fill="${C.ink}" text-anchor="middle">${esc(r.name)}</text>`
       + `<text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 + 12}" font-size="10" fill="${C.mute}" text-anchor="middle">${fmtNum(r.w / U)} × ${fmtNum(r.h / U)} m</text>`;
+  }
+  for (const z of plan.zones) {
+    g += `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${z.color}" fill-opacity=".1" stroke="${z.color}" stroke-width="3" stroke-dasharray="10 6"/>`
+      + (z.name ? `<text x="${z.x + 6}" y="${z.y + (z.w < 60 || z.h < 30 ? -6 : 15)}" font-size="12" font-weight="700" fill="${z.color}">${esc(z.name)}</text>` : '');
   }
   for (const cb of plan.cables) {
     const c = plan.circuits.find(c => c.id === cb.c), col = c ? c.color : C.none;

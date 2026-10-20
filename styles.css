@@ -174,3 +174,10 @@ button.primary{background:var(--accent);color:var(--btn-on-ink);border-color:var
 #acct .help{font-size:13px;color:var(--mute);margin:0}
 #acct p{margin:0}
 #acct input{width:100%}
+
+/* zonas punteadas */
+.t-zone{font-size:12px;font-weight:700;paint-order:stroke;stroke:var(--room);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+#selrow input#zcolor{width:44px;height:40px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--bg);flex:none}
+#selrow .swatches{display:flex;gap:4px;flex-wrap:wrap}
+#selrow button.sw{width:30px;height:30px;min-height:30px;padding:0;border-radius:50%;border:2px solid var(--line)}
+#selrow button.sw.on{border-color:var(--ink)}

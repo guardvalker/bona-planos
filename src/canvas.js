@@ -82,6 +82,19 @@ function labelMarkup(l) {
     `<text class="t-label" x="${l.x}" y="${l.y + 4.5}">${esc(l.text)}</text></g>`;
 }
 
+// Zona: recuadro punteado de color. Solo el borde y el nombre reciben toques, así no tapa lo que hay debajo.
+function zoneMarkup(z) {
+  const isSel = session.sel && session.sel.kind === 'zone' && session.sel.id === z.id;
+  const col = z.color, small = z.w < 60 || z.h < 30;
+  return `<g data-k="zone" data-id="${z.id}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}">
+    <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${col}" fill-opacity=".1" pointer-events="none"/>
+    <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="transparent" stroke-width="18" pointer-events="stroke"/>
+    <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="${col}" stroke-width="${isSel ? 4 : 3}" stroke-dasharray="10 6" pointer-events="none"/>
+    ${z.name ? `<text class="t-zone" x="${z.x + 6}" y="${z.y + (small ? -6 : 15)}" fill="${col}">${esc(z.name)}</text>` : ''}
+  </g>` + (isSel && session.tool === 'select'
+    ? `<g data-k="zhandle" data-id="${z.id}" style="cursor:nwse-resize"><circle cx="${z.x + z.w}" cy="${z.y + z.h}" r="22" fill="transparent"/><circle cx="${z.x + z.w}" cy="${z.y + z.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2"/></g>` : '');
+}
+
 export function renderCanvas() {
   const plan = getPlan();
   let h = '';
@@ -95,6 +108,7 @@ export function renderCanvas() {
       ${isSel && session.tool === 'select' ? `<g data-k="handle" data-id="${r.id}" style="cursor:nwse-resize"><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="22" fill="transparent"/><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2"/></g>` : ''}
     </g>`;
   }
+  for (const z of plan.zones) h += zoneMarkup(z);
   for (const cb of plan.cables) h += cableMarkup(cb);
   for (const it of plan.items) if (SYMBOLS[it.type]) h += symbolMarkup(it);
   for (const l of plan.labels) h += labelMarkup(l);

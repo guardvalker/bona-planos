@@ -1,7 +1,7 @@
 // Barra de herramientas, chips de circuitos, panel de selección y diálogo de datos.
 import {
   getPlan, session, circuitOf, circuitIndex, checkpoint, notify, summarize, describeRow, normalize, U,
-  replacePlan, undo, redo, canUndo, canRedo, techText, ROOM_TEMPLATES
+  replacePlan, undo, redo, canUndo, canRedo, techText, ROOM_TEMPLATES, PALETTE
 } from './state.js';
 import { exportPng, exportSvg, printPlan, exportJson, readPlanFile } from './export.js';
 import { SYMBOLS, SYMBOL_TYPES, symbolIcon } from './symbols.js';
@@ -9,7 +9,7 @@ import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
   setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection, armTemplate,
-  finishCable, cancelCable, deleteVertex
+  finishCable, cancelCable, deleteVertex, setZoneColor
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -22,7 +22,7 @@ function buildBar() {
   // Los símbolos son solo ícono (dibujados desde el registro): con 10 no entran con texto en 360 px.
   const sym = k => `<button data-tool="${k}" class="sym" aria-label="${esc(t(`sym.${k}.btn`))}" title="${esc(t(`sym.${k}.btn`))}">${symbolIcon(k)}</button>`;
   $('#bar').innerHTML =
-    btn('select', t('tool.select')) + btn('room', t('tool.room')) +
+    btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('zone', t('tool.zone')) +
     `<button id="bTpl">${t('tool.template')}</button><span class="sep"></span>` +
     SYMBOL_TYPES.map(sym).join('') + btn('cable', t('tool.cable')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
     `<button id="bUndo">${t('bar.undo')}</button><button id="bRedo">${t('bar.redo')}</button>` +
@@ -46,6 +46,7 @@ function renderHint() {
   let s;
   if (tool === 'select') s = t('hint.select');
   else if (tool === 'room') s = session.template ? t('hint.template', { name: t(`tpl.${session.template.key}`) }) : t('hint.room');
+  else if (tool === 'zone') s = t('hint.zone');
   else if (tool === 'label') s = t('hint.label');
   else if (tool === 'cable') s = t('hint.cable', { circuit: circuitOf(plan.active) ? `${cShort(plan.active)} ${circuitOf(plan.active).name}` : t('circuit.none') });
   else {
@@ -95,6 +96,15 @@ function renderSel() {
     if (!r) { el.innerHTML = ''; return; }
     el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}">${del}`;
     editOnce($('#rname'), v => { r.name = v; });
+  } else if (sel.kind === 'zone') {
+    const z = plan.zones.find(x => x.id === sel.id);
+    if (!z) { el.innerHTML = ''; return; }
+    el.innerHTML = `<span class="lbl">${t('zone.label')}</span><input id="zname" type="text" value="${esc(z.name)}" maxlength="60" aria-label="${t('zone.name')}">` +
+      `<input id="zcolor" type="color" value="${z.color}" aria-label="${t('zone.color')}">` +
+      `<span class="swatches">${PALETTE.map(c => `<button class="sw${c === z.color ? ' on' : ''}" data-col="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span>${del}`;
+    editOnce($('#zname'), v => { z.name = v; });
+    editOnce($('#zcolor'), v => { z.color = v; });
+    el.querySelectorAll('[data-col]').forEach(b => b.addEventListener('click', () => setZoneColor(b.dataset.col)));
   } else if (sel.kind === 'cable') {
     const cb = plan.cables.find(x => x.id === sel.id);
     if (!cb) { el.innerHTML = ''; return; }
