@@ -9,7 +9,7 @@ import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
   setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection,
-  finishCable, cancelCable, deleteVertex, setZoneColor
+  finishCable, cancelCable, deleteVertex, setZoneColor, assignSelection
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -75,6 +75,10 @@ function editOnce(input, fn) {
   });
 }
 
+// Selector para pasar lo seleccionado a otro circuito (no cambia el circuito activo).
+const circSelect = cur => `<select id="selCirc" aria-label="${t('sel.circuit')}">${getPlan().circuits.map(c =>
+  `<option value="${c.id}"${c.id === cur ? ' selected' : ''}>${cLabel(c)}</option>`).join('')}${circuitOf(cur) ? '' : `<option selected>${t('circuit.none')}</option>`}</select>`;
+
 function renderSel() {
   const plan = getPlan(), sel = session.sel, el = $('#selrow');
   if (session.draft) {                                     // trazando un cable
@@ -109,7 +113,7 @@ function renderSel() {
     let len = 0;
     for (let i = 1; i < cb.pts.length; i++) len += Math.hypot(cb.pts[i][0] - cb.pts[i - 1][0], cb.pts[i][1] - cb.pts[i - 1][1]);
     const canDrop = sel.vi !== undefined && cb.pts.length > 2;
-    el.innerHTML = `<span class="lbl">${t('cable.sel', { circuit: c ? cLabel(c) : t('circuit.none'), points: tn('count.punto', cb.pts.length), m: fmtNum(Math.round(len / U * 10) / 10) })}${t('cable.reassign')}</span>` +
+    el.innerHTML = `<span class="lbl">${t('cable.sel', { circuit: c ? cLabel(c) : t('circuit.none'), points: tn('count.punto', cb.pts.length), m: fmtNum(Math.round(len / U * 10) / 10) })}</span>` + circSelect(cb.c) +
       (canDrop ? `<button id="bVert">${t('cable.removePoint')}</button>` : '') + del;
     const bv = $('#bVert');
     if (bv) bv.addEventListener('click', deleteVertex);
@@ -124,10 +128,12 @@ function renderSel() {
     const sym = SYMBOLS[it.type], c = circuitOf(it.c);
     const name = t(`sym.${it.type}.name`);
     const label = sym.circuit
-      ? t('sel.item', { name: name[0].toUpperCase() + name.slice(1), circuit: c ? cLabel(c) : t('circuit.none') }) + t('sel.reassign')
+      ? t('sel.item', { name: name[0].toUpperCase() + name.slice(1), circuit: c ? cLabel(c) : t('circuit.none') })
       : name[0].toUpperCase() + name.slice(1);
-    el.innerHTML = `<span class="lbl">${label}</span>${rot}${del}`;
+    el.innerHTML = `<span class="lbl">${label}</span>${sym.circuit ? circSelect(it.c) : ''}${rot}${del}`;
   }
+  const sc = $('#selCirc');
+  if (sc) sc.addEventListener('change', () => assignSelection(sc.value));
   $('#bDel').addEventListener('click', deleteSelection);
   const br = $('#bRot');
   if (br) br.addEventListener('click', rotateSelection);

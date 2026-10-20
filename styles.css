@@ -196,3 +196,4 @@ button.gear{flex:none;min-width:44px;font-size:18px;padding:4px 10px}
 #sub{display:flex;gap:6px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
 #sub[hidden]{display:none}
 #sub button.sym{display:flex;align-items:center;gap:6px;min-width:44px;padding:4px 10px}
+#selrow select{flex:1 1 140px;min-width:0;min-height:40px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit}

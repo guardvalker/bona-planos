@@ -247,20 +247,25 @@ export function rotateSelection() {
   notify('data');
 }
 
-// Tocar un chip: activa el circuito y, si hay un elemento seleccionado, se lo reasigna.
+// Elegir un circuito cambia solo el circuito activo (el de lo próximo que se coloque o trace).
+// Lo ya dibujado se reasigna aparte, con el selector de la fila de selección.
 export function pickCircuit(id) {
   const plan = getPlan();
   if (!circuitOf(id)) return;
   plan.active = id;
-  const sel = session.sel;
   if (session.draft) session.draft.c = id;              // cambiar de circuito mientras se traza no suma historial
-  else if (sel && sel.kind === 'cable') {
-    const cb = plan.cables.find(c => c.id === sel.id);
-    if (cb && cb.c !== id) { checkpoint(); cb.c = id; }
-  } else if (sel && sel.kind === 'item') {
-    const it = plan.items.find(i => i.id === sel.id);
-    if (it && SYMBOLS[it.type].circuit && it.c !== id) { checkpoint(); it.c = id; }
-  }
+  notify('data');
+}
+
+// Reasigna al circuito `id` el elemento o cable seleccionado.
+export function assignSelection(id) {
+  const sel = session.sel, plan = getPlan();
+  if (!sel || !circuitOf(id)) return;
+  const obj = sel.kind === 'cable' ? plan.cables.find(c => c.id === sel.id)
+    : sel.kind === 'item' ? plan.items.find(i => i.id === sel.id) : null;
+  if (!obj || obj.c === id || (sel.kind === 'item' && !SYMBOLS[obj.type].circuit)) return;
+  checkpoint();
+  obj.c = id;
   notify('data');
 }
 
