@@ -1,7 +1,7 @@
 // Herramientas: qué hace cada gesto sobre el plano y las acciones de edición.
 // Los gestos usan `checkpoint()` antes de mutar, una sola vez por gesto.
 import {
-  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, circuitOf,
+  getPlan, session, snap, uid, SNAP, ISNAP, U, PALETTE, circuitOf, rectPts, bbox, inPoly,
   checkpoint, dropCheckpoint, notify, setTool, endDraft
 } from './state.js';
 import { askText } from './dialogs.js';
@@ -42,11 +42,20 @@ export const handlers = {
     if (tool === 'room') {
       checkpoint();
       const x = snap(p.x), y = snap(p.y);
-      const r = { id: uid(), x, y, w: 0, h: 0, name: t('room.default', { n: plan.rooms.length + 1 }) };
+      const r = { id: uid(), pts: rectPts(x, y, 0, 0), name: t('room.default', { n: plan.rooms.length + 1 }) };
       plan.rooms.push(r);
       session.sel = { kind: 'room', id: r.id };
       notify('canvas');
-      return { type: 'draw', r, ox: x, oy: y };
+      return { type: 'draw', r, ox: x, oy: y, kind: 'room' };
+    }
+    if (tool === 'wall') {
+      checkpoint();
+      const x = snap(p.x), y = snap(p.y);
+      const w = { id: uid(), pts: [[x, y], [x, y]] };
+      plan.walls.push(w);
+      session.sel = { kind: 'wall', id: w.id };
+      notify('canvas');
+      return { type: 'wdraw', w };
     }
     if (isPlaceTool(tool)) {
       checkpoint();
@@ -56,9 +65,29 @@ export const handlers = {
     }
     // herramienta mover
     if (!hit) { session.sel = null; notify('ui'); return null; }
-    if (hit.k === 'handle' || hit.k === 'zhandle') {
-      const list = hit.k === 'handle' ? plan.rooms : plan.zones;
-      return { type: 'resize', r: list.find(r => r.id === hit.id), pushed: false };
+    if (hit.k === 'zhandle') return { type: 'resize', r: plan.zones.find(r => r.id === hit.id), pushed: false };
+    if (hit.k === 'rvertex' || hit.k === 'rmid') {
+      const r = plan.rooms.find(x => x.id === hit.id);
+      if (!r) return null;
+      let i = +hit.i, pushed = false;
+      if (hit.k === 'rmid') {                         // tocar el "+" de una pared suma una esquina en el medio
+        checkpoint(); pushed = true;
+        const a = r.pts[i], b = r.pts[(i + 1) % r.pts.length];
+        r.pts.splice(i + 1, 0, [snap((a[0] + b[0]) / 2), snap((a[1] + b[1]) / 2)]);
+        i += 1;
+        notify('data');
+      }
+      session.sel = { kind: 'room', id: r.id, vi: i };
+      if (!pushed) notify('ui');
+      return { type: 'rvertex', r, i, pushed };
+    }
+    if (hit.k === 'wvertex' || hit.k === 'wall') {
+      const w = plan.walls.find(x => x.id === hit.id);
+      if (!w) return null;
+      session.sel = { kind: 'wall', id: w.id };
+      notify('ui');
+      if (hit.k === 'wvertex') return { type: 'wvertex', w, i: +hit.i, pushed: false };
+      return { type: 'wmove', w, orig: w.pts.map(q => [...q]), sx: p.x, sy: p.y, pushed: false };
     }
     if (hit.k === 'vertex' || hit.k === 'midpt' || hit.k === 'cable') {
       const cb = plan.cables.find(c => c.id === hit.id);
@@ -82,18 +111,24 @@ export const handlers = {
       notify('ui');
       return { type: 'vertex', cable: cb, i, pushed: false };
     }
-    const obj = { room: plan.rooms, zone: plan.zones, item: plan.items, label: plan.labels }[hit.k].find(o => o.id === hit.id);
+    if (hit.k === 'room') {
+      const r = plan.rooms.find(o => o.id === hit.id);
+      if (!r) return null;
+      session.sel = { kind: 'room', id: r.id };
+      // mover un ambiente arrastra también lo que hay adentro (y los cables que quedan enteros adentro)
+      const inside = (x, y) => inPoly(x, y, r.pts);
+      notify('ui');
+      return {
+        type: 'rmove', r, sx: p.x, sy: p.y, pushed: false, orig: r.pts.map(q => [...q]),
+        items: plan.items.filter(i => inside(i.x, i.y)).map(i => ({ i, x: i.x, y: i.y })),
+        cables: plan.cables.filter(cb => cb.pts.every(q => inside(q[0], q[1]))).map(cb => ({ cb, orig: cb.pts.map(q => [...q]) })),
+        walls: plan.walls.filter(w => w.pts.every(q => inside(q[0], q[1]))).map(w => ({ w, orig: w.pts.map(q => [...q]) }))
+      };
+    }
+    const obj = { zone: plan.zones, item: plan.items, label: plan.labels }[hit.k].find(o => o.id === hit.id);
     if (!obj) return null;
     session.sel = { kind: hit.k, id: hit.id };
     const d = { type: 'move', obj, kind: hit.k, dx: p.x - obj.x, dy: p.y - obj.y, pushed: false };
-    // mover un ambiente arrastra también lo que hay adentro
-    if (hit.k === 'room') {
-      const inside = (x, y) => x >= obj.x && x <= obj.x + obj.w && y >= obj.y && y <= obj.y + obj.h;
-      d.inside = plan.items.filter(i => inside(i.x, i.y)).map(i => ({ i, dx: i.x - obj.x, dy: i.y - obj.y }));
-      // los cables se mueven con el ambiente solo si están enteros adentro
-      d.x0 = obj.x; d.y0 = obj.y;
-      d.cables = plan.cables.filter(cb => cb.pts.every(q => inside(q[0], q[1]))).map(cb => ({ cb, orig: cb.pts.map(q => [...q]) }));
-    }
     notify('ui');
     return d;
   },
@@ -101,22 +136,37 @@ export const handlers = {
   move(d, p) {
     if (d.type === 'draw') {
       const x = snap(p.x), y = snap(p.y);
-      d.r.x = Math.min(d.ox, x); d.r.y = Math.min(d.oy, y);
-      d.r.w = Math.abs(x - d.ox); d.r.h = Math.abs(y - d.oy);
+      const bx = Math.min(d.ox, x), by = Math.min(d.oy, y), bw = Math.abs(x - d.ox), bh = Math.abs(y - d.oy);
+      if (d.kind === 'room') d.r.pts = rectPts(bx, by, bw, bh);
+      else { d.r.x = bx; d.r.y = by; d.r.w = bw; d.r.h = bh; }
+    } else if (d.type === 'wdraw') {
+      d.w.pts[1] = wallEnd(d.w.pts[0], p);
+    } else if (d.type === 'wvertex') {
+      if (!d.pushed) { checkpoint(); d.pushed = true; }
+      d.w.pts[d.i] = [snap(p.x), snap(p.y)];
+    } else if (d.type === 'wmove') {
+      const ddx = snap(p.x - d.sx), ddy = snap(p.y - d.sy);
+      if (!d.pushed && (ddx || ddy)) { checkpoint(); d.pushed = true; }
+      d.w.pts = d.orig.map(q => [q[0] + ddx, q[1] + ddy]);
+    } else if (d.type === 'rvertex') {
+      if (!d.pushed) { checkpoint(); d.pushed = true; }
+      d.r.pts[d.i] = [snap(p.x), snap(p.y)];
+    } else if (d.type === 'rmove') {
+      const ddx = snap(p.x - d.sx), ddy = snap(p.y - d.sy);
+      if (!d.pushed && (ddx || ddy)) { checkpoint(); d.pushed = true; }
+      d.r.pts = d.orig.map(q => [q[0] + ddx, q[1] + ddy]);
+      d.items.forEach(o => { o.i.x = o.x + ddx; o.i.y = o.y + ddy; });
+      d.cables.forEach(o => { o.cb.pts = o.orig.map(q => [q[0] + ddx, q[1] + ddy]); });
+      d.walls.forEach(o => { o.w.pts = o.orig.map(q => [q[0] + ddx, q[1] + ddy]); });
     } else if (d.type === 'resize') {
       if (!d.pushed) { checkpoint(); d.pushed = true; }
       d.r.w = Math.max(SNAP, snap(p.x) - d.r.x);
       d.r.h = Math.max(SNAP, snap(p.y) - d.r.y);
     } else if (d.type === 'move') {
       if (!d.pushed) { checkpoint(); d.pushed = true; }
-      const step = d.kind === 'room' || d.kind === 'zone' ? SNAP : ISNAP;
+      const step = d.kind === 'zone' ? SNAP : ISNAP;
       d.obj.x = snap(p.x - d.dx, step);
       d.obj.y = snap(p.y - d.dy, step);
-      if (d.inside) d.inside.forEach(o => { o.i.x = d.obj.x + o.dx; o.i.y = d.obj.y + o.dy; });
-      if (d.cables) {
-        const ddx = d.obj.x - d.x0, ddy = d.obj.y - d.y0;
-        d.cables.forEach(o => { o.cb.pts = o.orig.map(q => [q[0] + ddx, q[1] + ddy]); });
-      }
     } else if (d.type === 'cmove') {
       const ddx = snap(p.x - d.sx, ISNAP), ddy = snap(p.y - d.sy, ISNAP);
       if (!d.pushed && (ddx || ddy)) { checkpoint(); d.pushed = true; }
@@ -129,8 +179,15 @@ export const handlers = {
   },
 
   up(d) {
-    if (d.type === 'draw') {
-      if (d.r.w < SNAP * 2 || d.r.h < SNAP * 2) {
+    if (d.type === 'wdraw') {
+      const [a, b] = d.w.pts;
+      if (Math.hypot(b[0] - a[0], b[1] - a[1]) < SNAP * 2) {
+        getPlan().walls = getPlan().walls.filter(w => w.id !== d.w.id); dropCheckpoint(); session.sel = null;
+        notify('ui');
+      } else notify('data');                          // sigue en Pared para trazar la siguiente
+    } else if (d.type === 'draw') {
+      const b = d.kind === 'room' ? bbox(d.r.pts) : d.r;
+      if (b.w < SNAP * 2 || b.h < SNAP * 2) {
         removeShape(d.kind, d.r.id); dropCheckpoint(); session.sel = null;
         notify('ui');
       } else {
@@ -144,8 +201,17 @@ export const handlers = {
   // segundo dedo mientras se dibujaba o movía: se descarta el gesto
   cancel(d) {
     if (d.type === 'draw') { removeShape(d.kind, d.r.id); dropCheckpoint(); session.sel = null; notify('ui'); }
+    else if (d.type === 'wdraw') { getPlan().walls = getPlan().walls.filter(w => w.id !== d.w.id); dropCheckpoint(); session.sel = null; notify('ui'); }
   }
 };
+
+// Extremo de una pared: a la grilla, y si queda casi horizontal o vertical se endereza.
+function wallEnd(a, p) {
+  let x = snap(p.x), y = snap(p.y);
+  if (Math.abs(x - a[0]) <= SNAP) x = a[0];
+  else if (Math.abs(y - a[1]) <= SNAP) y = a[1];
+  return [x, y];
+}
 
 // Punto de cable: a la grilla de 5, o enganchado al elemento más cercano (para "conectar" el cable).
 function cablePoint(p) {
@@ -206,6 +272,18 @@ export function deleteVertex() {
   notify('data');
 }
 
+// Quita la esquina seleccionada de un ambiente (mínimo quedan 3).
+export function deleteRoomVertex() {
+  const sel = session.sel, plan = getPlan();
+  if (!sel || sel.kind !== 'room' || sel.vi === undefined) return;
+  const r = plan.rooms.find(x => x.id === sel.id);
+  if (!r || r.pts.length <= 3) return;
+  checkpoint();
+  r.pts.splice(sel.vi, 1);
+  session.sel = { kind: 'room', id: r.id };
+  notify('data');
+}
+
 function removeShape(kind, id) {
   const p = getPlan();
   if (kind === 'zone') p.zones = p.zones.filter(z => z.id !== id);
@@ -218,6 +296,7 @@ export function deleteSelection() {
   if (!sel) return;
   checkpoint();
   if (sel.kind === 'room') plan.rooms = plan.rooms.filter(r => r.id !== sel.id);
+  else if (sel.kind === 'wall') plan.walls = plan.walls.filter(w => w.id !== sel.id);
   else if (sel.kind === 'zone') plan.zones = plan.zones.filter(z => z.id !== sel.id);
   else if (sel.kind === 'label') plan.labels = plan.labels.filter(l => l.id !== sel.id);
   else if (sel.kind === 'cable') plan.cables = plan.cables.filter(c => c.id !== sel.id);
@@ -228,10 +307,10 @@ export function deleteSelection() {
 
 export function clearPlan() {
   const plan = getPlan();
-  if (!plan.rooms.length && !plan.items.length && !plan.labels.length && !plan.cables.length && !plan.zones.length) return;
+  if (!plan.rooms.length && !plan.walls.length && !plan.items.length && !plan.labels.length && !plan.cables.length && !plan.zones.length) return;
   if (!confirm(t('clear.confirm'))) return;
   checkpoint();
-  plan.rooms = []; plan.items = []; plan.labels = []; plan.cables = []; plan.zones = [];
+  plan.rooms = []; plan.walls = []; plan.items = []; plan.labels = []; plan.cables = []; plan.zones = [];
   session.sel = null;
   notify('data');
 }
@@ -239,7 +318,7 @@ export function clearPlan() {
 // Gira 90° el elemento o la etiqueta seleccionados.
 export function rotateSelection() {
   const sel = session.sel, plan = getPlan();
-  if (!sel || sel.kind === 'room' || sel.kind === 'zone') return;
+  if (!sel || sel.kind === 'room' || sel.kind === 'wall' || sel.kind === 'zone') return;
   const obj = (sel.kind === 'item' ? plan.items : plan.labels).find(o => o.id === sel.id);
   if (!obj) return;
   checkpoint();

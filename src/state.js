@@ -2,7 +2,8 @@
 //
 // Formato del plano (JSON versionado):
 //   { v, id, name, updatedAt, units:{perMeter,snap},
-//     rooms:[{id,x,y,w,h,name}],
+//     rooms:[{id,pts:[[x,y],...],name}],    polígono (esquinas = nodos); los v1–v3 traían x,y,w,h y se convierten
+//     walls:[{id,pts:[[x,y],[x,y]]}],       paredes sueltas (medias paredes, tabiques) dentro de un ambiente
 //     items:[{id,type,x,y,c,rot}],          type: clave de SYMBOLS; rot: 0|90|180|270
 //     zones:[{id,x,y,w,h,name,color}],      recuadros punteados de color (horno, mostrador, etc.), sin circuito
 //     labels:[{id,x,y,text,rot}],           texto libre sobre el plano
@@ -20,16 +21,47 @@ export const ISNAP = 5;
 export const HISTORY_MAX = 100;
 export const PALETTE = ['#e08a00', '#1e6fff', '#12a150', '#d63a3a', '#8b5cf6', '#0ea5b7', '#d946a8', '#7a5c3e'];
 
+export const rectPts = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+export function bbox(pts) {
+  const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+  const x = Math.min(...xs), y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+// Área con signo (shoelace) y centroide; si el polígono es degenerado devuelve el centro del bbox.
+export function polyInfo(pts) {
+  let a = 0, cx = 0, cy = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % pts.length], f = x0 * y1 - x1 * y0;
+    a += f; cx += (x0 + x1) * f; cy += (y0 + y1) * f;
+  }
+  const b = bbox(pts);
+  if (Math.abs(a) < 1e-6) return { area: 0, cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
+  return { area: Math.abs(a) / 2, cx: cx / (3 * a), cy: cy / (3 * a) };
+}
+export function inPoly(x, y, pts) {
+  let c = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+// ¿Es un rectángulo alineado a los ejes? (para mostrar "ancho × alto" en vez de m²)
+export const isRect = pts => pts.length === 4 && pts.every((q, i) => {
+  const n = pts[(i + 1) % 4];
+  return q[0] === n[0] || q[1] === n[1];
+});
+
 export const uid = () => Math.random().toString(36).slice(2, 9);
 export const snap = (v, n = SNAP) => Math.round(v / n) * n;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 export function newPlan(name = '') {
   return {
-    v: 3, id: crypto.randomUUID ? crypto.randomUUID() : uid() + uid(), name,
+    v: 4, id: crypto.randomUUID ? crypto.randomUUID() : uid() + uid(), name,
     updatedAt: new Date().toISOString(),
     units: { perMeter: U, snap: SNAP },
-    rooms: [], items: [], labels: [], cables: [], zones: [],
+    rooms: [], walls: [], items: [], labels: [], cables: [], zones: [],
     circuits: [
       { id: 'c1', name: t('circuit.lighting'), color: PALETTE[0] },
       { id: 'c2', name: t('circuit.sockets'), color: PALETTE[1] },
@@ -60,9 +92,19 @@ export function normalize(d) {
     prot: str(c && c.prot, 60), cable: str(c && c.cable, 60), rcd: str(c && c.rcd, 60), notes: str(c && c.notes, 200)
   }));
   p.rooms = d.rooms.map(r => {
-    const x = num(r && r.x), y = num(r && r.y), w = num(r && r.w), h = num(r && r.h);
-    if ([x, y, w, h].includes(null)) return null;
-    return { id: safeId(r.id) || uid(), x, y, w: Math.max(0, w), h: Math.max(0, h), name: String(r.name ?? '').slice(0, 60) };
+    let pts = (Array.isArray(r && r.pts) ? r.pts : []).slice(0, 100)
+      .map(q => (Array.isArray(q) && num(q[0]) !== null && num(q[1]) !== null ? [+q[0], +q[1]] : null)).filter(Boolean);
+    if (pts.length < 3) {
+      const x = num(r && r.x), y = num(r && r.y), w = num(r && r.w), h = num(r && r.h);
+      if ([x, y, w, h].includes(null)) return null;
+      pts = rectPts(x, y, Math.max(0, w), Math.max(0, h));
+    }
+    return { id: safeId(r.id) || uid(), pts, name: String(r.name ?? '').slice(0, 60) };
+  }).filter(Boolean);
+  p.walls = (Array.isArray(d.walls) ? d.walls : []).map(w => {
+    const pts = (Array.isArray(w && w.pts) ? w.pts : []).slice(0, 2)
+      .map(q => (Array.isArray(q) && num(q[0]) !== null && num(q[1]) !== null ? [+q[0], +q[1]] : null)).filter(Boolean);
+    return pts.length === 2 ? { id: safeId(w.id) || uid(), pts } : null;
   }).filter(Boolean);
   p.zones = (Array.isArray(d.zones) ? d.zones : []).map((z, i) => {
     const x = num(z && z.x), y = num(z && z.y), w = num(z && z.w), h = num(z && z.h);
@@ -94,7 +136,7 @@ export function normalize(d) {
 /* ---------- estado ---------- */
 let plan = newPlan();
 export const getPlan = () => plan;
-// sel: {kind:'room'|'zone'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable
+// sel: {kind:'room'|'wall'|'zone'|'item'|'label'|'cable', id, vi?}   vi: punto seleccionado de un cable o esquina de un ambiente
 // draft: cable que se está dibujando (un solo checkpoint para todo el trazado)
 export const session = { tool: 'select', sel: null, draft: null };
 

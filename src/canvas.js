@@ -1,7 +1,7 @@
 // Render SVG del plano, vista (pan/zoom/pinch) y entrada por puntero.
 // Lo que pasa al tocar/arrastrar lo decide tools.js; acá solo se traducen los
 // eventos a coordenadas del mundo y se maneja el desplazamiento y el zoom.
-import { getPlan, session, circuitOf, circuitIndex, clamp, U } from './state.js';
+import { getPlan, session, circuitOf, circuitIndex, clamp, U, polyInfo, isRect, bbox } from './state.js';
 import { SYMBOLS, drawSymbol } from './symbols.js';
 import { t, fmtNum } from './i18n.js';
 
@@ -95,19 +95,49 @@ function zoneMarkup(z) {
     ? `<g data-k="zhandle" data-id="${z.id}" style="cursor:nwse-resize"><circle cx="${z.x + z.w}" cy="${z.y + z.h}" r="22" fill="transparent"/><circle cx="${z.x + z.w}" cy="${z.y + z.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2"/></g>` : '');
 }
 
+const node = (k, id, i, x, y, on) =>
+  `<g data-k="${k}" data-id="${id}" data-i="${i}" style="cursor:move"><circle cx="${x}" cy="${y}" r="16" fill="transparent"/>` +
+  `<circle cx="${x}" cy="${y}" r="7" fill="${on ? 'var(--sel)' : '#fff'}" stroke="var(--sel)" stroke-width="2.5"/></g>`;
+
+function roomMarkup(r) {
+  const isSel = session.sel && session.sel.kind === 'room' && session.sel.id === r.id;
+  const info = polyInfo(r.pts), b = bbox(r.pts);
+  const size = isRect(r.pts) ? `${fmtNum(b.w / U)} × ${fmtNum(b.h / U)} m` : `${fmtNum(Math.round(info.area / (U * U) * 10) / 10)} m²`;
+  let h = `<g>
+    <polygon data-k="room" data-id="${r.id}" points="${pointsAttr(r.pts)}" stroke-linejoin="round"
+      fill="var(--room)" stroke="${isSel ? 'var(--sel)' : 'var(--wall)'}" stroke-width="${isSel ? 3.5 : 3}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}"/>
+    <text class="t-name" x="${info.cx}" y="${info.cy - 2}">${esc(r.name)}</text>
+    <text class="t-size" x="${info.cx}" y="${info.cy + 12}">${size}</text>`;
+  if (isSel && session.tool === 'select') {
+    const n = r.pts.length;
+    for (let i = 0; i < n; i++) {                                   // "+" en el medio de cada pared larga
+      const a = r.pts[i], c = r.pts[(i + 1) % n];
+      if (Math.hypot(c[0] - a[0], c[1] - a[1]) < 30) continue;
+      const mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2;
+      h += `<g data-k="rmid" data-id="${r.id}" data-i="${i}" style="cursor:copy"><circle cx="${mx}" cy="${my}" r="14" fill="transparent"/>` +
+        `<circle cx="${mx}" cy="${my}" r="7" fill="var(--sel)" opacity=".85"/><path d="M${mx - 3.5} ${my}h7M${mx} ${my - 3.5}v7" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></g>`;
+    }
+    h += r.pts.map((q, i) => node('rvertex', r.id, i, q[0], q[1], session.sel.vi === i)).join('');
+  }
+  return h + '</g>';
+}
+
+// Pared suelta (media pared, tabique): línea gruesa con el mismo trazo que los ambientes.
+function wallMarkup(w) {
+  const isSel = session.sel && session.sel.kind === 'wall' && session.sel.id === w.id;
+  const pts = pointsAttr(w.pts);
+  let h = `<g data-k="wall" data-id="${w.id}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}">` +
+    `<polyline points="${pts}" stroke="transparent" stroke-width="22" fill="none" stroke-linecap="round"/>` +
+    `<polyline points="${pts}" stroke="${isSel ? 'var(--sel)' : 'var(--wall)'}" stroke-width="${isSel ? 5 : 4}" fill="none" stroke-linecap="square"/></g>`;
+  if (isSel && session.tool === 'select') h += w.pts.map((q, i) => node('wvertex', w.id, i, q[0], q[1], false)).join('');
+  return h;
+}
+
 export function renderCanvas() {
   const plan = getPlan();
   let h = '';
-  for (const r of plan.rooms) {
-    const isSel = session.sel && session.sel.kind === 'room' && session.sel.id === r.id;
-    h += `<g>
-      <rect data-k="room" data-id="${r.id}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"
-        fill="var(--room)" stroke="${isSel ? 'var(--sel)' : 'var(--wall)'}" stroke-width="${isSel ? 3.5 : 3}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}"/>
-      <text class="t-name" x="${r.x + r.w / 2}" y="${r.y + r.h / 2 - 2}">${esc(r.name)}</text>
-      <text class="t-size" x="${r.x + r.w / 2}" y="${r.y + r.h / 2 + 12}">${fmtNum(r.w / U)} × ${fmtNum(r.h / U)} m</text>
-      ${isSel && session.tool === 'select' ? `<g data-k="handle" data-id="${r.id}" style="cursor:nwse-resize"><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="22" fill="transparent"/><circle cx="${r.x + r.w}" cy="${r.y + r.h}" r="10" fill="var(--sel)" stroke="#fff" stroke-width="2"/></g>` : ''}
-    </g>`;
-  }
+  for (const r of plan.rooms) h += roomMarkup(r);
+  for (const w of plan.walls) h += wallMarkup(w);
   for (const z of plan.zones) h += zoneMarkup(z);
   for (const cb of plan.cables) h += cableMarkup(cb);
   for (const it of plan.items) if (SYMBOLS[it.type]) h += symbolMarkup(it);

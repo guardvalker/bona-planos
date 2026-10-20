@@ -1,6 +1,6 @@
 // Exportaciones: SVG autónomo (plano + leyenda + resumen), PNG, impresión/PDF y JSON.
 // El SVG usa colores fijos de tema claro: sale igual aunque la app esté en oscuro.
-import { getPlan, summarize, describeRow, techText, normalize, U } from './state.js';
+import { getPlan, summarize, describeRow, techText, normalize, U, polyInfo, bbox, isRect } from './state.js';
 import { SYMBOLS, drawSymbol } from './symbols.js';
 import { t, tn, fmtNum, lang } from './i18n.js';
 import { esc } from './canvas.js';
@@ -17,7 +17,8 @@ export function buildSvg(plan = getPlan()) {
   // límites del dibujo (ambientes + elementos con su etiqueta)
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const ext = (a, b, c, d) => { x0 = Math.min(x0, a); y0 = Math.min(y0, b); x1 = Math.max(x1, c); y1 = Math.max(y1, d); };
-  plan.rooms.forEach(r => ext(r.x - 2, r.y - 2, r.x + r.w + 2, r.y + r.h + 2));
+  plan.rooms.forEach(r => r.pts.forEach(q => ext(q[0] - 2, q[1] - 2, q[0] + 2, q[1] + 2)));
+  plan.walls.forEach(w => w.pts.forEach(q => ext(q[0] - 3, q[1] - 3, q[0] + 3, q[1] + 3)));
   plan.zones.forEach(z => ext(z.x - 3, z.y - 20, z.x + z.w + 3, z.y + z.h + 3));
   plan.items.forEach(i => ext(i.x - 16, i.y - 16, i.x + 16, i.y + 28));
   plan.cables.forEach(cb => cb.pts.forEach(q => ext(q[0] - 4, q[1] - 4, q[0] + 4, q[1] + 4)));
@@ -45,9 +46,14 @@ export function buildSvg(plan = getPlan()) {
   // plano
   g += `<g transform="translate(${(W - pw) / 2 - x0} ${py - y0})">`;
   for (const r of plan.rooms) {
-    g += `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${C.room}" stroke="${C.wall}" stroke-width="3"/>`
-      + `<text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 - 2}" font-size="13" font-weight="600" fill="${C.ink}" text-anchor="middle">${esc(r.name)}</text>`
-      + `<text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 + 12}" font-size="10" fill="${C.mute}" text-anchor="middle">${fmtNum(r.w / U)} × ${fmtNum(r.h / U)} m</text>`;
+    const info = polyInfo(r.pts), b = bbox(r.pts);
+    const size = isRect(r.pts) ? `${fmtNum(b.w / U)} × ${fmtNum(b.h / U)} m` : `${fmtNum(Math.round(info.area / (U * U) * 10) / 10)} m²`;
+    g += `<polygon points="${r.pts.map(q => q.join(',')).join(' ')}" fill="${C.room}" stroke="${C.wall}" stroke-width="3" stroke-linejoin="round"/>`
+      + `<text x="${info.cx}" y="${info.cy - 2}" font-size="13" font-weight="600" fill="${C.ink}" text-anchor="middle">${esc(r.name)}</text>`
+      + `<text x="${info.cx}" y="${info.cy + 12}" font-size="10" fill="${C.mute}" text-anchor="middle">${size}</text>`;
+  }
+  for (const w of plan.walls) {
+    g += `<polyline points="${w.pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="${C.wall}" stroke-width="4" stroke-linecap="square"/>`;
   }
   for (const z of plan.zones) {
     g += `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="${z.color}" fill-opacity=".1" stroke="${z.color}" stroke-width="3" stroke-dasharray="10 6"/>`

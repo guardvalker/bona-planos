@@ -9,7 +9,7 @@ import { t, tn, fmtNum } from './i18n.js';
 import { esc, zoomBy, renderCanvas } from './canvas.js';
 import {
   setTool, deleteSelection, clearPlan, pickCircuit, addCircuit, removeCircuit, rotateSelection,
-  finishCable, cancelCable, deleteVertex, setZoneColor, assignSelection
+  finishCable, cancelCable, deleteVertex, deleteRoomVertex, setZoneColor, assignSelection
 } from './tools.js';
 
 const $ = s => document.querySelector(s);
@@ -24,7 +24,7 @@ function buildBar() {
   // Los símbolos son solo ícono (dibujados desde el registro).
   const sym = (k, withName = false) => `<button data-tool="${k}" class="sym" aria-label="${esc(t(`sym.${k}.btn`))}" title="${esc(t(`sym.${k}.btn`))}">${symbolIcon(k)}${withName ? `<span>${esc(t(`sym.${k}.abbr`))}</span>` : ''}</button>`;
   $('#bar').innerHTML =
-    btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('zone', t('tool.zone')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
+    btn('select', t('tool.select')) + btn('room', t('tool.room')) + btn('wall', t('tool.wall')) + btn('zone', t('tool.zone')) + btn('label', t('tool.label')) + '<span class="sep"></span>' +
     BAR_TYPES.map(k => sym(k)).join('') + `<button id="bPanel" aria-haspopup="true">${esc(t('tool.panel'))} ▾</button>` + btn('cable', t('tool.cable')) + '<span class="sep"></span>' +
     `<button id="bExport">${t('bar.export')}</button><button id="bData">${t('bar.data')}</button><button id="bClear" class="danger">${t('bar.clear')}</button>`;
   $('#bar').setAttribute('aria-label', t('bar.label'));
@@ -94,8 +94,14 @@ function renderSel() {
   if (sel.kind === 'room') {
     const r = plan.rooms.find(x => x.id === sel.id);
     if (!r) { el.innerHTML = ''; return; }
-    el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}">${del}`;
+    const canDrop = sel.vi !== undefined && r.pts.length > 3;
+    el.innerHTML = `<span class="lbl">${t('room.label')}</span><input id="rname" type="text" value="${esc(r.name)}" aria-label="${t('room.name')}">` +
+      (canDrop ? `<button id="bRVert">${t('room.removeCorner')}</button>` : '') + del;
     editOnce($('#rname'), v => { r.name = v; });
+    const bv = $('#bRVert');
+    if (bv) bv.addEventListener('click', deleteRoomVertex);
+  } else if (sel.kind === 'wall') {
+    el.innerHTML = `<span class="lbl">${t('wall.label')}</span>${del}`;
   } else if (sel.kind === 'zone') {
     const z = plan.zones.find(x => x.id === sel.id);
     if (!z) { el.innerHTML = ''; return; }
