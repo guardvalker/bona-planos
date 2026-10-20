@@ -99,6 +99,16 @@ const node = (k, id, i, x, y, on) =>
   `<g data-k="${k}" data-id="${id}" data-i="${i}" style="cursor:move"><circle cx="${x}" cy="${y}" r="16" fill="transparent"/>` +
   `<circle cx="${x}" cy="${y}" r="7" fill="${on ? 'var(--sel)' : '#fff'}" stroke="var(--sel)" stroke-width="2.5"/></g>`;
 
+// Medida de un tramo: texto a un costado (hacia afuera del centro dado) con halo, sin recibir toques.
+function dimMarkup(a, b, cx, cy) {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  if (len < 10) return '';
+  const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+  let nx = -(b[1] - a[1]) / len, ny = (b[0] - a[0]) / len;
+  if (nx * (mx - cx) + ny * (my - cy) < 0) { nx = -nx; ny = -ny; }
+  return `<text class="t-dim" x="${mx + nx * 14}" y="${my + ny * 14 + 4}">${fmtNum(Math.round(len / U * 100) / 100)} m</text>`;
+}
+
 function roomMarkup(r) {
   const isSel = session.sel && session.sel.kind === 'room' && session.sel.id === r.id;
   const info = polyInfo(r.pts), b = bbox(r.pts);
@@ -108,6 +118,7 @@ function roomMarkup(r) {
       fill="var(--room)" stroke="${isSel ? 'var(--sel)' : 'var(--wall)'}" stroke-width="${isSel ? 3.5 : 3}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}"/>
     <text class="t-name" x="${info.cx}" y="${info.cy - 2}">${esc(r.name)}</text>
     <text class="t-size" x="${info.cx}" y="${info.cy + 12}">${size}</text>`;
+  if (isSel) h += r.pts.map((q, i) => dimMarkup(q, r.pts[(i + 1) % r.pts.length], info.cx, info.cy)).join('');
   if (isSel && session.tool === 'select') {
     const n = r.pts.length;
     for (let i = 0; i < n; i++) {                                   // "+" en el medio de cada pared larga
@@ -129,6 +140,7 @@ function wallMarkup(w) {
   let h = `<g data-k="wall" data-id="${w.id}" style="cursor:${session.tool === 'select' ? 'move' : 'crosshair'}">` +
     `<polyline points="${pts}" stroke="transparent" stroke-width="22" fill="none" stroke-linecap="round"/>` +
     `<polyline points="${pts}" stroke="${isSel ? 'var(--sel)' : 'var(--wall)'}" stroke-width="${isSel ? 5 : 4}" fill="none" stroke-linecap="square"/></g>`;
+  if (isSel) h += dimMarkup(w.pts[0], w.pts[1], (w.pts[0][0] + w.pts[1][0]) / 2 + 1e-3, (w.pts[0][1] + w.pts[1][1]) / 2 - 1e-3);
   if (isSel && session.tool === 'select') h += w.pts.map((q, i) => node('wvertex', w.id, i, q[0], q[1], false)).join('');
   return h;
 }
