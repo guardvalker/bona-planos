@@ -62,8 +62,9 @@ export function buildSvg(plan = getPlan()) {
   for (const cb of plan.cables) {
     const c = plan.circuits.find(c => c.id === cb.c), col = c ? c.color : C.none;
     const pts = cb.pts.map(q => q.join(',')).join(' ');
-    g += `<polyline points="${pts}" fill="none" stroke="${C.room}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`
-      + `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const op = 1 - ((c && c.fade) || 0);
+    g += `<g${op < 1 ? ` opacity="${op}"` : ''}><polyline points="${pts}" fill="none" stroke="${C.room}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`
+      + `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" stroke-linecap="round" stroke-linejoin="round"/></g>`;
   }
   for (const it of plan.items) {
     const sym = SYMBOLS[it.type];

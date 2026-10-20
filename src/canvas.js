@@ -50,7 +50,8 @@ function cableMarkup(cb) {
   const c = circuitOf(cb.c), col = c ? c.color : '#5d6b78';
   const sel = session.sel && session.sel.kind === 'cable' && session.sel.id === cb.id;
   const pts = pointsAttr(cb.pts), cap = 'stroke-linecap="round" stroke-linejoin="round" fill="none"';
-  let h = `<g data-k="cable" data-id="${cb.id}" style="cursor:pointer">` +
+  const op = sel ? 1 : 1 - ((c && c.fade) || 0);                      // el cable seleccionado se ve entero
+  let h = `<g data-k="cable" data-id="${cb.id}" style="cursor:pointer"${op < 1 ? ` opacity="${op}"` : ''}>` +
     `<polyline points="${pts}" stroke="transparent" stroke-width="22" ${cap}/>` +
     `<polyline points="${pts}" stroke="var(--room)" stroke-width="${sel ? 8 : 6}" opacity=".9" ${cap}/>` +
     `<polyline points="${pts}" stroke="${col}" stroke-width="3.5" stroke-dasharray="9 5" ${cap}/></g>`;

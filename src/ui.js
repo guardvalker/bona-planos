@@ -172,6 +172,7 @@ function renderCircuitEditor() {
         <input type="text" value="${esc(c.name)}" aria-label="${t('circuit.name', { n: i + 1 })}">
         <button class="danger" data-del="${c.id}" aria-label="${t('circuit.del', { n: i + 1 })}">✕</button>
       </div>
+      <label class="fade"><span>${t('circuit.fade')}</span><input type="range" min="0" max="0.8" step="0.1" value="${c.fade || 0}" data-fade><b>${Math.round((c.fade || 0) * 100)}%</b></label>
       <div class="tech">
         ${TECH_FIELDS.map(f => `<label><span>${t(`tech.${f}`)}</span><input type="text" data-f="${f}" value="${esc(c[f] || '')}" placeholder="${esc(t(`tech.${f}.ph`))}" maxlength="${f === 'notes' ? 200 : 60}"></label>`).join('')}
       </div>
@@ -181,6 +182,8 @@ function renderCircuitEditor() {
     const [color, name] = block.querySelectorAll('.crow input');
     editOnce(color, v => { c.color = v; });
     editOnce(name, v => { c.name = v; });
+    const fade = block.querySelector('[data-fade]');
+    editOnce(fade, v => { c.fade = +v; fade.nextElementSibling.textContent = Math.round(+v * 100) + '%'; });
     block.querySelectorAll('.tech input').forEach(inp => editOnce(inp, v => { c[inp.dataset.f] = v; }));
   });
 }
