@@ -106,7 +106,7 @@ function dimMarkup(a, b, cx, cy) {
   const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
   let nx = -(b[1] - a[1]) / len, ny = (b[0] - a[0]) / len;
   if (nx * (mx - cx) + ny * (my - cy) < 0) { nx = -nx; ny = -ny; }
-  return `<text class="t-dim" x="${mx + nx * 14}" y="${my + ny * 14 + 4}">${fmtNum(Math.round(len / U * 100) / 100)} m</text>`;
+  return `<text class="t-dim" x="${mx + nx * 18}" y="${my + ny * 18 + 4}">${fmtNum(Math.round(len / U * 100) / 100)} m</text>`;
 }
 
 function roomMarkup(r) {
