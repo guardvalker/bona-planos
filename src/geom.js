@@ -57,3 +57,15 @@ export function unionRooms(a, b) {
   });
   return pts.length >= 3 ? { pts } : { error: 'merge.errApart' };
 }
+
+// Distancia de un punto {x,y} a una polilínea [[x,y],...].
+export function distToPath(p, pts) {
+  let best = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.y - ay) * dy) / l2)) : 0;
+    best = Math.min(best, Math.hypot(p.x - (ax + t * dx), p.y - (ay + t * dy)));
+  }
+  return best;
+}

@@ -7,7 +7,8 @@ import {
 import { askText } from './dialogs.js';
 import { SYMBOLS } from './symbols.js';
 import { t } from './i18n.js';
-import { unionRooms } from './geom.js';
+import { unionRooms, distToPath } from './geom.js';
+import { view } from './canvas.js';
 
 export const isPlaceTool = tool => tool in SYMBOLS;
 
@@ -71,6 +72,15 @@ export const handlers = {
       if (!hit || hit.k !== 'room') { session.sel = null; notify('ui'); return null; }
     }
     // herramienta mover
+    if (hit && hit.k === 'cable') {                 // entre cables superpuestos gana el más cercano al dedo
+      const tol = 14 / view.s;
+      let best = null, bd = Infinity;
+      for (const cb of plan.cables) {
+        const d = distToPath(p, cb.pts);
+        if (d <= tol && d < bd) { best = cb; bd = d; }
+      }
+      if (best) hit = { k: 'cable', id: best.id };
+    }
     if (!hit) { session.sel = null; notify('ui'); return null; }
     if (hit.k === 'zhandle') return { type: 'resize', r: plan.zones.find(r => r.id === hit.id), pushed: false };
     if (hit.k === 'rvertex' || hit.k === 'rmid') {
@@ -100,8 +110,11 @@ export const handlers = {
       const cb = plan.cables.find(c => c.id === hit.id);
       if (!cb) return null;
       if (hit.k === 'cable') {
+        const was = session.sel && session.sel.kind === 'cable' && session.sel.id === cb.id;
         session.sel = { kind: 'cable', id: cb.id };
         notify('ui');
+        // sin seleccionar: tocar selecciona y arrastrar desplaza el plano; solo el cable ya seleccionado se arrastra
+        if (!was) return { type: 'cselect', tap: true };
         return { type: 'cmove', cable: cb, orig: cb.pts.map(q => [...q]), sx: p.x, sy: p.y, pushed: false };
       }
       let i = +hit.i;

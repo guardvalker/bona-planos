@@ -53,7 +53,7 @@ function cableMarkup(cb) {
   const w = (c && c.thick) || CABLE_W;
   const op = sel ? 1 : 1 - ((c && c.fade) || 0);                      // el cable seleccionado se ve entero
   let h = `<g data-k="cable" data-id="${cb.id}" style="cursor:pointer"${op < 1 ? ` opacity="${op}"` : ''}>` +
-    `<polyline points="${pts}" stroke="transparent" stroke-width="22" ${cap}/>` +
+    `<polyline points="${pts}" stroke="transparent" stroke-width="18" vector-effect="non-scaling-stroke" ${cap}/>` +   // área de toque fija en pantalla: con zoom los cables se separan
     `<polyline points="${pts}" stroke="var(--room)" stroke-width="${w + (sel ? 4.5 : 2.5)}" opacity=".9" ${cap}/>` +
     `<polyline points="${pts}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${w * 2.6} ${w * 1.4}" ${cap}/></g>`;
   if (session.draft && session.draft.id === cb.id) {
