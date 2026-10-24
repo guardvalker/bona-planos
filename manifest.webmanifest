@@ -1,6 +1,6 @@
 {
-  "name": "Plano eléctrico rápido",
-  "short_name": "Planos",
+  "name": "BonaPlanos",
+  "short_name": "BonaPlanos",
   "description": "Dibujá un plano 2D y marcá tomas, luces, llaves y tablero por circuito. Funciona sin conexión.",
   "lang": "es-AR",
   "id": "/bona-planos/",

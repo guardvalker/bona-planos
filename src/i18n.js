@@ -2,8 +2,8 @@
 // objeto más a STR con las mismas claves. Los `{x}` se reemplazan con t(clave, {x}).
 const STR = {
   es: {
-    'app.name': 'Planos',
-    'app.title': 'Plano eléctrico rápido',
+    'app.name': 'BonaPlanos',
+    'app.title': 'BonaPlanos',
 
     'nav.back': 'Planos',
     'nav.backAria': 'Volver a la lista de planos',
@@ -142,6 +142,7 @@ const STR = {
     'cl.1_5_0': 'Símbolos rehechos al estilo de los planos IRAM/IEC (tomas, llave, boca de luz, timbre, térmica): más grandes y fáciles de leer. Se quitó el ventilador (los que ya estaban en un plano pasan a boca de luz) y Etiqueta pasó a la primera sección de la barra.',
     'cl.1_6_0': 'Barra simplificada: Toma (con sus 3 patas), Luz, Térmica, Llave y Cable. Tablero abre un submenú con Tablero principal (TP) y Seccional (TS). Se quitaron Plantillas, toma doble, AA, TV y timbre (los que ya estaban en un plano se siguen viendo).',
     'cl.1_9_4': 'Más fácil elegir un cable entre varios juntos: el área de toque ahora es más fina y de tamaño fijo en pantalla (al hacer zoom los cables se separan y se tocan mejor), si se superponen gana el más cercano al dedo, y un cable sin seleccionar solo se selecciona al tocarlo (arrastrar desplaza el plano); recién el ya seleccionado se puede mover arrastrando.',
+    'cl.1_10_0': 'La app pasa a llamarse BonaPlanos (antes Plano eléctrico rápido) y estrena ícono: un honguito con el plano en las manos. Si la tenés en el inicio del celular, el nombre y el ícono nuevos aparecen al volver a agregarla.',
     'cl.1_9_3': 'Arreglo de actualizaciones: la app ahora busca la última versión en la red cada vez (y usa lo guardado solo sin conexión), se fija si hay versión nueva al volver a abrirla y se recarga sola cuando se actualiza. Antes podía quedarse con archivos viejos y había que borrar la caché.',
     'cl.1_9_2': 'Cada circuito también tiene "Grosor de los cables" en Editar circuitos, para hacerlos más finos o más gruesos. El export lo respeta.',
     'cl.1_9_1': 'Cada circuito tiene "Transparencia de los cables" (0 a 80%) en Editar circuitos, para que los cables no tapen lo de abajo. El cable seleccionado se ve entero y el export respeta el valor.',
@@ -244,8 +245,8 @@ const STR = {
     'data.error': 'No se pudo leer ese texto. Revisá que esté completo.'
   },
   en: {
-    'app.name': 'Plans',
-    'app.title': 'Quick electrical plan',
+    'app.name': 'BonaPlanos',
+    'app.title': 'BonaPlanos',
 
     'nav.back': 'Plans',
     'nav.backAria': 'Back to the plan list',
@@ -384,6 +385,7 @@ const STR = {
     'cl.1_5_0': 'Symbols redrawn in the IRAM/IEC plan style (outlets, switch, ceiling light, doorbell, breaker): bigger and easier to read. The ceiling fan was removed (existing ones become a light point) and Label moved to the first section of the toolbar.',
     'cl.1_6_0': 'Simplified toolbar: Outlet (3 pins), Light, Breaker, Switch and Cable. Panel opens a submenu with Main panel (MP) and Sub-panel (SP). Removed Templates, double outlet, A/C, TV and doorbell (ones already in a plan still show).',
     'cl.1_9_4': 'Easier to pick a cable among several close together: the touch area is now thinner and fixed on screen (zooming spreads cables apart), the closest one to your finger wins when they overlap, and an unselected cable only gets selected on tap (dragging pans the plan); only the already selected one can be dragged to move.',
+    'cl.1_10_0': 'The app is now called BonaPlanos (formerly Quick electrical plan) and has a new icon: a little mushroom holding a blueprint. If it is on your home screen, the new name and icon show up when you add it again.',
     'cl.1_9_3': 'Update fix: the app now fetches the latest version from the network every time (using the saved copy only offline), checks for a new version when you reopen it and reloads itself after updating. Before, it could keep old files and you had to clear the cache.',
     'cl.1_9_2': 'Each circuit also has "Cable thickness" under Edit circuits, to make cables thinner or thicker. Exports respect it.',
     'cl.1_9_1': 'Each circuit has "Cable transparency" (0 to 80%) under Edit circuits, so cables do not cover what is underneath. The selected cable shows fully and exports respect the value.',
